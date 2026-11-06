@@ -1,0 +1,2088 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Жрунометр</title>
+<meta name="description" content="Ироничный счётчик калорий для двоих">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#E1EEDA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1612" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Жрунометр">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script>/* the chosen theme is applied before the first paint, so there is no flash of the other one */
+try { var zt = localStorage.getItem('zhrunometr:theme'); if (zt === 'light' || zt === 'dark') document.documentElement.setAttribute('data-theme', zt); } catch (e) {}</script>
+<style>
+/* Fonts ship with the app (downloaded by scripts/fetch-fonts.sh); without them the fallbacks below apply. */
+@font-face{font-family:"Unbounded";src:url("fonts/Unbounded.ttf") format("truetype");font-weight:200 900;font-display:swap}
+@font-face{font-family:"Onest";src:url("fonts/Onest.ttf") format("truetype");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Neucha";src:url("fonts/Neucha.ttf") format("truetype");font-weight:400;font-display:swap}
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: one phone-width column. An analog dial is the hero, sticker-cut cards carry hard ink shadows, a fixed tab bar sits at the bottom. */
+:root{
+  --bg:#E1EEDA;
+  --paper:#FFFFFF;
+  --paper-2:#F1F7EC;
+  --ink:#1B1C2E;
+  --muted:#58626E;
+  --hair:#C3D4BC;
+  --edge:#1B1C2E;
+  --shadow:#1B1C2E;
+  --btn:#1B1C2E;
+  --btn-ink:#FFFFFF;
+  --focus:#5B3DF5;
+  --scrim:rgba(14,20,16,.5);
+  --needle:#E8392B;
+  --dial:#FFFDF6;
+  --dial-ink:#1B1C2E;
+  --dial-hair:#DDD8C8;
+  /* verdict scale: blue too little, green good, gold perfect, then orange to purple for overeating */
+  --v-leaf:#4AB3E0;
+  --v-good:#2FBF78;
+  --v-crown:#FFC928;
+  --v-meh:#FF9A2E;
+  --v-hamster:#F2542D;
+  --v-hole:#6B2FA3;
+  --v-skip:#B9C5BB;
+  --v-run:#E6EFE1;
+  --on-hole:#FFFFFF;
+  /* sticker palette: the same in both themes, stickers carry their own white edge */
+  --bun:#F5B942;
+  --bun-shade:#D98C22;
+  --cheek:#FF8A80;
+  --tongue:#FF6F7D;
+  --st-edge:#FFFFFF;
+  --st-ink:#1B1C2E;
+  --st-gold:#FFC928;
+  --st-jewel:#E8392B;
+  --st-drop:#8FD3FF;
+  --st-leaf:#59C36A;
+  --st-pale:#DCE6A6;
+  --st-hole:#2B2140;
+  --st-swirl:#8A66C9;
+  --st-ring:#FF8A3D;
+  --st-shadow:rgba(16,18,34,.24);
+  --cap:#1B1C2E;
+  /* type */
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-note:"Neucha","Segoe Print","Comic Sans MS",cursive;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1612; --paper:#18221C; --paper-2:#1F2B24; --ink:#EDF4E8; --muted:#A1AFA6; --hair:#2E3D34;
+    --edge:#4B5E52; --shadow:#000000; --btn:#EDF4E8; --btn-ink:#122018; --focus:#A893FF; --scrim:rgba(0,0,0,.6);
+    --needle:#FF5A47; --dial:#141C17; --dial-ink:#E4ECE0; --dial-hair:#2F3D35;
+    --v-leaf:#5BBDE6; --v-good:#3CCB85; --v-crown:#FFD23F; --v-meh:#FFA444; --v-hamster:#FF6A45; --v-hole:#A167DB; --v-skip:#4F5D54; --v-run:#26332B; --on-hole:#14101E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1612; --paper:#18221C; --paper-2:#1F2B24; --ink:#EDF4E8; --muted:#A1AFA6; --hair:#2E3D34;
+  --edge:#4B5E52; --shadow:#000000; --btn:#EDF4E8; --btn-ink:#122018; --focus:#A893FF; --scrim:rgba(0,0,0,.6);
+  --needle:#FF5A47; --dial:#141C17; --dial-ink:#E4ECE0; --dial-hair:#2F3D35;
+  --v-leaf:#5BBDE6; --v-good:#3CCB85; --v-crown:#FFD23F; --v-meh:#FFA444; --v-hamster:#FF6A45; --v-hole:#A167DB; --v-skip:#4F5D54; --v-run:#26332B; --on-hole:#14101E;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+
+.app{max-width:480px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px calc(108px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
+.view{display:flex;flex-direction:column;gap:20px}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:8px}
+.brand{display:flex;align-items:center;gap:8px;margin-right:auto;min-width:0}
+.brand h1{font:800 21px/1 var(--f-display);letter-spacing:-.02em;white-space:nowrap}
+.plate{font:600 8.5px/1 var(--f-display);letter-spacing:.16em;padding:4px 5px 3px;border:1.5px solid var(--edge);border-radius:5px;white-space:nowrap}
+.chip-sync{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 11px;border-radius:999px;border:2px solid var(--edge);background:var(--paper);font-size:12.5px;font-weight:600;white-space:nowrap}
+.chip-sync .dot{width:8px;height:8px;border-radius:50%;background:var(--v-skip);flex:none}
+.chip-sync[data-mode="cloud"] .dot{background:var(--v-good)}
+.chip-sync[data-mode="viewer"] .dot{background:var(--v-meh)}
+.chip-sync[data-mode="connecting"] .dot{background:var(--v-crown);animation:blink 1s steps(2) infinite}
+.icon-btn{flex:none;width:38px;height:38px;display:grid;place-items:center;padding:0;border-radius:12px;border:2px solid var(--edge);background:var(--paper);box-shadow:2px 2px 0 var(--shadow);transition:transform .08s ease,box-shadow .08s ease}
+.icon-btn svg{width:20px;height:20px}
+@media (max-width:399px){.plate{display:none}}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:13px;border:2px solid var(--edge);background:var(--btn);color:var(--btn-ink);font-weight:700;font-size:15px;box-shadow:3px 3px 0 var(--shadow);transition:transform .08s ease,box-shadow .08s ease}
+.btn:active,.food:active,.icon-btn:active,.nav-btn:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13.5px;box-shadow:2px 2px 0 var(--shadow)}
+.btn.ghost{background:var(--paper);color:var(--ink)}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;box-shadow:none;cursor:default;transform:none}
+
+.strip{display:flex;align-items:center;gap:12px;padding:10px 12px;border:2px dashed var(--edge);border-radius:14px;font-size:13.5px;line-height:1.35}
+.strip > span{min-width:0;flex:1}
+.strip .btn{flex:none}
+
+/* date navigation */
+.datenav{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:10px}
+.nav-btn{height:42px;padding:0;border-radius:12px;border:2px solid var(--edge);background:var(--paper);box-shadow:2px 2px 0 var(--shadow);font:800 18px/1 var(--f-display);transition:transform .08s ease,box-shadow .08s ease}
+.nav-btn:disabled{opacity:.3;box-shadow:none;cursor:default;transform:none}
+.datenav .lbl{text-align:center;min-width:0}
+.d1{font:800 17px/1.15 var(--f-display)}
+.d2{font-size:13px;color:var(--muted);margin-top:2px}
+
+/* hero dial */
+.hero{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 14px 20px;background:var(--paper);border:2px solid var(--edge);border-radius:24px;box-shadow:5px 5px 0 var(--shadow)}
+.hero .sticker{position:absolute;top:-12px;right:-4px;width:86px;transform:rotate(9deg);pointer-events:none}
+.hero .sticker .kb{width:100%;height:auto}
+.hero .sticker.pop{animation:pop .55s cubic-bezier(.34,1.56,.64,1)}
+#dial-host{width:min(74vw,276px);max-width:100%}
+.dial{display:block;width:100%;height:auto}
+.g-face{fill:var(--dial);stroke:var(--edge);stroke-width:4}
+.g-inner{fill:none;stroke:var(--dial-hair);stroke-width:1.5}
+.g-zone{fill:none;stroke-width:16}
+.g-tick{stroke:var(--dial-ink);stroke-width:1.4}
+.g-tick.maj{stroke-width:3}
+.g-lbl{font:600 12.5px var(--f-display);fill:var(--dial-ink);font-variant-numeric:tabular-nums}
+.g-lbl.one{font-weight:800}
+.g-plate{font:600 8.5px var(--f-display);letter-spacing:.2em;fill:var(--muted)}
+.g-needle{transform-origin:150px 150px;transform-box:view-box;transition:transform .85s cubic-bezier(.34,1.45,.64,1)}
+.g-wob{transform-origin:150px 150px;transform-box:view-box}
+.dial.pegged .g-wob{animation:wob .14s ease-in-out infinite alternate}
+.g-nd{fill:var(--needle);stroke:var(--st-ink);stroke-width:2;stroke-linejoin:round}
+.g-cap{fill:var(--cap)}
+.g-cap-hl{fill:var(--st-edge);opacity:.5}
+.g-read{font:800 30px var(--f-display);fill:var(--dial-ink);font-variant-numeric:tabular-nums}
+.g-read.long{font-size:23px}
+.g-sub{font:500 12.5px var(--f-body);fill:var(--muted)}
+
+.verdict{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.note{font:400 21px/1.2 var(--f-note);max-width:28ch;text-wrap:balance}
+.fact{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;text-wrap:balance}
+.fact b{color:var(--ink)}
+
+/* verdict pills */
+.pill{display:inline-flex;align-items:center;font:800 12px/1 var(--f-display);letter-spacing:.07em;text-transform:uppercase;padding:8px 13px 7px;border:2px solid var(--edge);border-radius:999px;background:var(--pc,var(--v-run));color:var(--st-ink);box-shadow:2px 2px 0 var(--shadow)}
+.v-leaf{--pc:var(--v-leaf)} .v-good{--pc:var(--v-good)} .v-crown{--pc:var(--v-crown)} .v-meh{--pc:var(--v-meh)}
+.v-hamster{--pc:var(--v-hamster)} .v-hole{--pc:var(--v-hole)} .v-skip{--pc:var(--v-skip)} .v-run,.v-idle{--pc:var(--v-run)}
+.pill.v-idle,.pill.v-run,.pill.v-skip{color:var(--ink)}
+.pill.v-hole{color:var(--on-hole)}
+.pill.sm{font-size:10.5px;padding:6px 10px 5px;box-shadow:none}
+
+/* sections */
+.sec{display:flex;flex-direction:column;gap:12px}
+.sec-h{display:flex;align-items:baseline;gap:10px}
+.sec-h h2{font:800 12px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.sec-h .aside{margin-left:auto;font-size:12.5px;color:var(--muted);text-align:right}
+
+/* quick foods */
+.foods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.food{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:88px;padding:10px 10px 9px;background:var(--paper);border:2px solid var(--edge);border-radius:14px;box-shadow:3px 3px 0 var(--shadow);text-align:left;transition:transform .08s ease,box-shadow .08s ease}
+.food .em{font-size:22px;line-height:1.1}
+.food .nm{font-weight:600;font-size:13px;line-height:1.2;overflow-wrap:anywhere}
+.food .kc{margin-top:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.food.mine{background:var(--paper-2)}
+.food .star{position:absolute;top:7px;right:8px;font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted)}
+.more{align-self:flex-start;padding:4px 0;border:0;background:none;font-weight:600;font-size:14px;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.foods-body{display:flex;flex-direction:column;gap:12px}
+.fold{display:inline-flex;align-items:center;gap:6px;min-height:36px;margin:-8px 0;padding:0;border:0;background:none;color:inherit;letter-spacing:inherit;text-transform:inherit}
+.fold .chev{width:18px;height:18px;flex:none;transition:transform .2s ease}
+.fold[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.sec-h.mid{align-items:center}
+.link-btn{margin-left:auto;min-height:36px;margin-block:-8px;padding:0 2px;border:0;background:none;font-weight:700;font-size:13.5px;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.food.add{align-items:center;justify-content:center;gap:2px;border-style:dashed;box-shadow:none;background:transparent;color:var(--muted);text-align:center}
+.food.add .em{font:800 26px/1 var(--f-display);color:var(--ink)}
+.food.add .nm{font-weight:600}
+.foods.editing .food.fav{border-style:dashed}
+.food .pen{position:absolute;top:6px;right:6px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:var(--btn);color:var(--btn-ink)}
+.food .pen svg{width:13px;height:13px}
+.keep{grid-column:1/-1;display:flex;align-items:center;gap:10px;min-height:40px;font-size:14px;font-weight:600;cursor:pointer}
+.keep input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--btn)}
+.emojis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.emojis button{aspect-ratio:1;min-height:36px;padding:0;border-radius:10px;border:2px solid var(--hair);background:var(--paper);font-size:20px;line-height:1}
+.emojis button[aria-pressed="true"]{border-color:var(--ink);background:var(--v-crown);box-shadow:2px 2px 0 var(--shadow)}
+
+/* streak and awards */
+.streak-strip{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;background:var(--paper);border:2px solid var(--edge);border-radius:16px;box-shadow:3px 3px 0 var(--shadow);text-align:left;font-size:13.5px;line-height:1.35;transition:transform .08s ease,box-shadow .08s ease}
+.streak-strip:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
+.streak-strip .md{width:44px;flex:none}
+.streak-strip span{min-width:0;flex:1}
+.streak-strip b{font-variant-numeric:tabular-nums}
+.streak-strip .go{flex:none;font:800 18px/1 var(--f-display);color:var(--muted)}
+.md{display:block;width:100%;height:auto;overflow:visible}
+.md .rb{stroke:var(--st-ink);stroke-width:2.5;stroke-linejoin:round}
+.md .dsc{stroke:var(--st-ink);stroke-width:3.5}
+.md .rim{fill:none;stroke-width:2.5;stroke-dasharray:3 4}
+.md .shn{fill:none;stroke:#FFFFFF;stroke-width:3.5;stroke-linecap:round;opacity:.6}
+.md .num{font:800 22px var(--f-display);fill:var(--st-ink);font-variant-numeric:tabular-nums}
+.md .num.long{font-size:17px}
+.md .gly{font-size:26px}
+.md.off .rb,.md.off .dsc{fill:var(--v-run);stroke:var(--edge)}
+.md.off .rim{stroke:var(--edge);opacity:.5}
+.md.off .shn{display:none}
+.md.off .num{fill:var(--muted)}
+.md.off .gly{opacity:.35;filter:grayscale(1)}
+#aw-sec{scroll-margin-top:14px}
+.aw-card{display:flex;flex-direction:column;gap:10px;padding:14px;background:var(--paper);border:2px solid var(--edge);border-radius:18px;box-shadow:4px 4px 0 var(--shadow)}
+.aw-row{display:flex;align-items:baseline;gap:12px}
+.aw-row .s-v{flex:none}
+.aw-row p{font-size:13.5px;color:var(--muted);line-height:1.35;min-width:0}
+.aw-row p b{color:var(--ink)}
+.aw-best{font-size:12.5px;color:var(--muted)}
+.medals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 10px}
+.medal{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;text-align:center}
+.medal .md{width:68px}
+.m-n{font-weight:700;font-size:13px;line-height:1.2;margin-top:4px;overflow-wrap:anywhere}
+.m-d{font-size:11.5px;color:var(--muted);line-height:1.3}
+.medal.off .m-n{color:var(--muted)}
+.award{align-items:center;text-align:center;padding-top:22px}
+.aw-kick{font:800 12px/1 var(--f-display);letter-spacing:.16em;text-transform:uppercase;color:var(--needle)}
+.aw-big{width:150px}
+.aw-big .md{animation:medal-in .7s cubic-bezier(.34,1.56,.64,1)}
+.award h2{font:800 22px/1.2 var(--f-display)}
+.aw-cond{font-size:14px;color:var(--muted)}
+
+/* custom entry */
+.custom{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:10px}
+.custom .btn{grid-column:1/-1}
+.inp{width:100%;min-height:46px;padding:0 12px;border:2px solid var(--edge);border-radius:12px;background:var(--paper);font-size:16px}
+.inp::placeholder{color:var(--muted);opacity:.85}
+select.inp{padding-right:8px}
+.fine{font-size:12.5px;color:var(--muted);line-height:1.4}
+.fine.err{color:var(--ink);font-weight:600}
+
+/* day log */
+.log{list-style:none;margin:0;padding:0;border-top:2px solid var(--edge)}
+.log li{display:grid;grid-template-columns:42px minmax(0,1fr) auto 34px 34px;align-items:center;gap:8px;min-height:50px;padding:6px 0;border-bottom:1px dashed var(--hair)}
+.log .fv{width:34px;height:34px;padding:0;border-radius:10px;border:1.5px solid var(--hair);background:transparent;color:var(--muted);font-size:17px;line-height:1}
+.log .fv[aria-pressed="true"]{color:var(--st-ink);border-color:var(--edge);background:var(--v-crown)}
+.log .t{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.log .n{font-weight:500;overflow-wrap:anywhere}
+.log .k{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.log .x{width:34px;height:34px;padding:0;border-radius:10px;border:1.5px solid var(--hair);background:transparent;color:var(--muted);font-size:17px;line-height:1}
+.log li.sum{border-bottom:0}
+.log li.sum .lbl{grid-column:1/3;font:800 12px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase}
+.log li.sum .k{font:800 17px/1 var(--f-display)}
+.log li.empty{display:block;padding:16px 0;color:var(--muted);font:400 20px/1.3 var(--f-note)}
+
+/* stickers */
+.kb{overflow:visible;filter:drop-shadow(1.5px 2.5px 0 var(--st-shadow))}
+.kb .edge *{fill:var(--st-edge);stroke:var(--st-edge);stroke-width:12;stroke-linejoin:round;stroke-linecap:round}
+.kb .edge text{stroke-width:8}
+.kb .body{fill:var(--bun);stroke:var(--st-ink);stroke-width:3.5}
+.kb .body-pale{fill:var(--st-pale);stroke:var(--st-ink);stroke-width:3.5}
+.kb .body-hole{fill:var(--st-hole);stroke:var(--st-ink);stroke-width:3.5}
+.kb .shade{fill:var(--bun-shade);opacity:.55}
+.kb .shine{fill:none;stroke:var(--st-edge);stroke-width:4;stroke-linecap:round;opacity:.75}
+.kb .ink{fill:var(--st-ink)}
+.kb .hl{fill:var(--st-edge)}
+.kb .ln{fill:none;stroke:var(--st-ink);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.kb .cheek{fill:var(--cheek);opacity:.85}
+.kb .cheek-big{fill:var(--cheek);stroke:var(--st-ink);stroke-width:3}
+.kb .mouth{fill:var(--st-ink);stroke:var(--st-ink);stroke-width:2;stroke-linejoin:round}
+.kb .tongue{fill:var(--tongue)}
+.kb .gold{fill:var(--st-gold);stroke:var(--st-ink);stroke-width:2.6;stroke-linejoin:round}
+.kb .jewel{fill:var(--st-jewel)}
+.kb .drop{fill:var(--st-drop);stroke:var(--st-ink);stroke-width:2.5}
+.kb .leafp{fill:var(--st-leaf);stroke:var(--st-ink);stroke-width:2.5;stroke-linejoin:round}
+.kb .ring{fill:none;stroke:var(--st-ring);stroke-width:5;stroke-linecap:round}
+.kb .swirl{fill:none;stroke:var(--st-swirl);stroke-width:3;stroke-linecap:round}
+.kb .eyew{fill:var(--st-edge);stroke:var(--st-ink);stroke-width:2.5}
+.kb .star{fill:var(--st-gold)}
+.kb .crumb{fill:var(--bun-shade);stroke:var(--st-ink);stroke-width:1.2}
+.kb .zz{font:800 17px var(--f-display);fill:var(--st-ink)}
+.kb .zz.big{font-size:22px}
+
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);border-top:2px solid var(--edge);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabbar-in{max-width:448px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding-block:8px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px 5px;border:2px solid transparent;border-radius:13px;background:none;color:var(--muted);font-size:12px;font-weight:600}
+.tab svg{width:22px;height:22px}
+.tab[aria-selected="true"]{color:var(--ink);background:var(--paper-2);border-color:var(--edge)}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:40;transform:translateX(-50%);width:min(448px,calc(100% - 32px));display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;background:var(--btn);color:var(--btn-ink);border-radius:14px;border:2px solid var(--edge);box-shadow:4px 4px 0 var(--shadow);font-weight:600;font-size:14px;line-height:1.35}
+.toast.show{animation:toast-in .22s ease-out}
+.toast span{flex:1;min-width:0}
+.toast button{flex:none;min-height:36px;padding:0 12px;border-radius:10px;border:2px solid currentColor;background:transparent;color:inherit;font-weight:700;font-size:13px}
+
+/* settings sheet */
+.backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:var(--scrim)}
+.sheet{width:100%;max-width:480px;max-height:90%;overflow-y:auto;display:flex;flex-direction:column;gap:16px;background:var(--paper);border:2px solid var(--edge);border-bottom:0;border-radius:24px 24px 0 0;padding-top:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(22px + env(safe-area-inset-bottom,0px))}
+.sh-head{display:flex;align-items:center;gap:10px}
+.sh-head h2{font:800 18px/1.2 var(--f-display);margin-right:auto}
+.tagline{font:400 19px/1.25 var(--f-note);color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field > label,.grp-l{font-size:13px;font-weight:600}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.presets button{min-height:36px;padding:0 12px;border-radius:999px;border:2px solid var(--edge);background:var(--paper);font-weight:600;font-size:13.5px;font-variant-numeric:tabular-nums}
+.presets button[aria-pressed="true"]{background:var(--btn);color:var(--btn-ink)}
+.calc{border:2px dashed var(--edge);border-radius:14px;padding:12px}
+.calc summary{cursor:pointer;font-weight:700}
+.calc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.calc-grid .wide{grid-column:1/-1}
+.sex{display:flex;gap:8px}
+.sex label{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:2px solid var(--edge);border-radius:12px;font-weight:600}
+.sex input{accent-color:var(--btn);width:16px;height:16px;margin:0}
+.calc-out{display:flex;align-items:center;gap:12px;margin-top:12px;font-weight:600}
+.calc-out b{font:800 20px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.calc-out .btn{margin-left:auto}
+.sync-note{font-size:13px;color:var(--muted);padding:10px 12px;background:var(--paper-2);border-radius:12px}
+
+/* dynamics */
+.view-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.title{font:800 22px/1.1 var(--f-display);margin-right:auto}
+.seg{display:inline-grid;grid-template-columns:1fr 1fr;border:2px solid var(--edge);border-radius:12px;overflow:hidden;background:var(--paper);box-shadow:2px 2px 0 var(--shadow)}
+.seg button{min-height:38px;padding:0 14px;border:0;background:none;font-weight:600;font-size:13.5px}
+.seg button + button{border-left:2px solid var(--edge)}
+.seg button[aria-pressed="true"]{background:var(--btn);color:var(--btn-ink)}
+.seg.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+.seg.three button{padding:0 6px;line-height:1.2}
+.chart-card{position:relative;padding:12px 8px 10px;background:var(--paper);border:2px solid var(--edge);border-radius:20px;box-shadow:4px 4px 0 var(--shadow)}
+.chart{display:block;width:100%;height:auto}
+.chart .gl{stroke:var(--hair);stroke-width:1}
+.chart .ax{fill:var(--muted);font:500 10px var(--f-body);font-variant-numeric:tabular-nums}
+.chart .ax.now{fill:var(--ink);font-weight:700}
+.chart .nl{stroke:var(--ink);stroke-width:1.6;stroke-dasharray:5 4}
+.chart .nlbl{fill:var(--ink);font:700 10px var(--f-body);font-variant-numeric:tabular-nums}
+.chart .gz{fill:var(--v-crown);opacity:.22}
+.chart .bar{stroke:var(--edge);stroke-width:1.6}
+.chart .bar.today,.mini .mb.today{stroke-dasharray:4 3;opacity:.8}
+.chart .stub,.mini .stub{fill:var(--v-skip)}
+.chart-key{font-size:12px;color:var(--muted);padding:8px 6px 0;line-height:1.4}
+.stamp{position:absolute;top:10px;right:12px;z-index:2;font:800 10.5px/1 var(--f-display);letter-spacing:.16em;text-transform:uppercase;color:var(--needle);border:2px solid var(--needle);border-radius:6px;padding:5px 7px 4px;transform:rotate(7deg);background:var(--paper)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:2px solid var(--edge);border-bottom:2px solid var(--edge)}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0;padding-block:12px;padding-right:8px}
+.stat + .stat{padding-left:12px;border-left:1px dashed var(--hair)}
+.s-k{font-size:12px;color:var(--muted);font-weight:600}
+.s-v{font:800 22px/1.15 var(--f-display);font-variant-numeric:tabular-nums}
+.s-v small{font:600 13px var(--f-body);color:var(--muted)}
+.s-u{font-size:12px;color:var(--muted);line-height:1.3}
+.summary{font:400 21px/1.25 var(--f-note)}
+.legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}
+.legend div{display:flex;align-items:center;gap:8px;font-size:13.5px;min-height:32px;min-width:0}
+.legend .kb{width:28px;height:28px;flex:none}
+.legend span{min-width:0}
+.legend b{margin-left:auto;font-variant-numeric:tabular-nums}
+.legend .zero{color:var(--muted)}
+.legend .zero .kb{opacity:.45;filter:none}
+.hist{list-style:none;margin:0;padding:0;border-top:2px solid var(--edge)}
+.hist button{width:100%;display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 0;border:0;border-bottom:1px dashed var(--hair);background:none;text-align:left}
+.hist .kb{width:36px;height:36px}
+.h-d b{display:block;font-weight:700}
+.h-d span{font-size:12.5px;color:var(--muted)}
+.h-v{text-align:right;font-variant-numeric:tabular-nums}
+.h-v b{font-weight:700}
+.h-l{display:block;font-size:12px;color:var(--muted)}
+
+/* company */
+.lede{color:var(--muted);font-size:14px;max-width:60ch}
+.lead{display:flex;flex-direction:column;gap:10px;padding:14px;background:var(--paper-2);border:2px solid var(--edge);border-radius:18px}
+.lead-row{display:flex;align-items:center;gap:12px}
+.lead-row .kb{width:42px;height:42px;flex:none}
+.lead-row p{font-size:14px;line-height:1.35;min-width:0}
+.lead-row b{display:block;font:800 11.5px/1.3 var(--f-display);letter-spacing:.1em;text-transform:uppercase}
+.people{display:flex;flex-direction:column;gap:16px}
+.person{position:relative;display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px 14px;padding:14px;background:var(--paper);border:2px solid var(--edge);border-radius:20px;box-shadow:4px 4px 0 var(--shadow)}
+.person.ghost{border-style:dashed;box-shadow:none;background:transparent}
+.p-st .kb{width:64px;height:64px}
+.p-main{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0}
+.who{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.who .nm{font:800 16px/1.2 var(--f-display);overflow-wrap:anywhere}
+.me-tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--btn);color:var(--btn-ink)}
+.p-num{font-size:14px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.p-num b{color:var(--ink);font-size:16px}
+.track{position:relative;width:100%;height:12px;border:2px solid var(--edge);border-radius:999px;background:var(--paper-2);overflow:hidden}
+.track .fill{position:absolute;top:0;bottom:0;left:0;border-right:2px solid var(--edge)}
+.track .tick{position:absolute;top:0;bottom:0;left:66.667%;width:2px;background:var(--ink)}
+.p-foot{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:14px;padding-top:10px;border-top:1px dashed var(--hair)}
+.p-mini{display:flex;flex-direction:column;gap:4px;min-width:0}
+.mini{display:block;width:100%;max-width:220px;height:auto}
+.mini .mb{stroke:var(--edge);stroke-width:1}
+.mini .mn{stroke:var(--ink);stroke-width:1.2;stroke-dasharray:3 3}
+.mini-cap{font-size:11.5px;color:var(--muted)}
+.p-streak{text-align:right;font-size:12.5px;color:var(--muted);line-height:1.3;max-width:12ch}
+.p-streak b{display:block;font:800 22px/1 var(--f-display);color:var(--ink);margin-bottom:2px}
+.peek-btn{grid-column:1/-1;justify-self:start;padding:2px 0;border:0;background:none;font-weight:700;font-size:14px;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.peek{grid-column:1/-1;list-style:none;margin:0;padding:0;border-top:2px solid var(--edge)}
+.peek li{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;padding:7px 0;border-bottom:1px dashed var(--hair);font-size:14px}
+.peek .t{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12.5px;align-self:center}
+.peek .k{font-weight:700;font-variant-numeric:tabular-nums}
+.invite{display:flex;flex-direction:column;gap:10px;padding:14px;border:2px dashed var(--edge);border-radius:18px;font-size:14px}
+.invite h3{font:800 14px/1.25 var(--f-display)}
+.invite summary{cursor:pointer;font-weight:700}
+.invite ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+#sync{display:flex;flex-direction:column;gap:12px}
+
+@keyframes pop{0%{transform:rotate(9deg) scale(.6)}60%{transform:rotate(-5deg) scale(1.12)}100%{transform:rotate(9deg) scale(1)}}
+@keyframes wob{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}
+@keyframes blink{50%{opacity:.25}}
+@keyframes toast-in{from{transform:translate(-50%,14px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+@keyframes medal-in{0%{transform:scale(.4) rotate(-25deg);opacity:0}60%{transform:scale(1.12) rotate(6deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+@media (prefers-reduced-motion: reduce){
+  .g-needle,.fold .chev{transition:none}
+  .dial.pegged .g-wob,.hero .sticker.pop,.toast.show,.chip-sync[data-mode="connecting"] .dot,.aw-big .md{animation:none}
+}
+.chip-sync[data-mode="offline"] .dot{background:var(--v-meh)}
+.sync-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.sync-form .btn{min-height:46px}
+.code{font:800 23px/1.2 var(--f-display);letter-spacing:.06em;padding:12px 14px;border:2px solid var(--edge);border-radius:12px;background:var(--paper);text-align:center;user-select:all;-webkit-user-select:all;overflow-wrap:anywhere}
+.invite .row{display:flex;flex-wrap:wrap;gap:8px}
+.msg{font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:10px;background:var(--paper-2)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><h1>Жрунометр</h1><span class="plate" title="Прибор учёта съеденного">ЖМ-1</span></div>
+    <button class="chip-sync" id="sync-chip" type="button" data-act="tab" data-view="team" data-mode="local"><span class="dot" aria-hidden="true"></span><span id="sync-txt">Связь…</span></button>
+    <button class="icon-btn" id="settings-btn" type="button" data-act="open-sheet" aria-label="Настройка прибора">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M18 7h2M4 17h3M11 17h9"/><circle cx="15.5" cy="7" r="2.3"/><circle cx="8.5" cy="17" r="2.3"/></svg>
+    </button>
+  </header>
+
+  <div class="strip" id="hint" hidden>
+    <span>Прибор откалиброван на <b id="hint-norm">2 000</b> ккал в день. Своя норма будет точнее.</span>
+    <button class="btn sm ghost" type="button" data-act="open-sheet">Настроить</button>
+  </div>
+
+  <section class="view" id="view-today" aria-label="Сегодня">
+    <div class="strip" id="past" hidden>
+      <span>Ты в прошлом. Записи можно поправить задним числом.</span>
+      <button class="btn sm ghost" type="button" data-act="go-today">К сегодня</button>
+    </div>
+    <div class="datenav">
+      <button class="nav-btn" type="button" data-act="prev" aria-label="Предыдущий день">‹</button>
+      <div class="lbl"><div class="d1" id="d1">Сегодня</div><div class="d2" id="d2"></div></div>
+      <button class="nav-btn" id="next" type="button" data-act="next" aria-label="Следующий день">›</button>
+    </div>
+    <div class="hero">
+      <div class="sticker" id="hero-st" aria-hidden="true"></div>
+      <div id="dial-host"></div>
+      <div class="verdict" aria-live="polite">
+        <span class="pill" id="pill"></span>
+        <p class="note" id="note"></p>
+        <p class="fact" id="fact"></p>
+      </div>
+    </div>
+    <button class="streak-strip" id="streak" type="button" data-act="go-awards" hidden></button>
+    <section class="sec" id="fav-sec">
+      <div class="sec-h mid"><h2>Мои блюда</h2><button class="link-btn" id="fav-edit" type="button" data-act="fav-edit" aria-pressed="false" hidden>Изменить</button></div>
+      <div class="foods" id="favs"></div>
+      <p class="fine" id="fav-hint"></p>
+    </section>
+    <section class="sec">
+      <div class="sec-h mid">
+        <h2><button class="fold" id="fold" type="button" data-act="fold-foods" aria-expanded="true" aria-controls="foods-body">
+          <span>Готовые блюда</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button></h2>
+        <span class="aside" id="fold-aside">одно касание, одна порция</span>
+      </div>
+      <div class="foods-body" id="foods-body">
+        <div class="foods" id="foods"></div>
+        <button class="more" id="more" type="button" data-act="more">Все блюда</button>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Своё блюдо</h2></div>
+      <form class="custom" id="custom" autocomplete="off" novalidate>
+        <input class="inp" id="c-name" name="c-name" maxlength="60" placeholder="Что съел? Например, сырники" aria-label="Название блюда">
+        <input class="inp" id="c-kcal" name="c-kcal" inputmode="numeric" maxlength="5" placeholder="ккал" aria-label="Калории">
+        <label class="keep"><input type="checkbox" id="c-keep"> Запомнить в «Мои блюда»</label>
+        <button class="btn" type="submit">Добавить в протокол</button>
+      </form>
+      <p class="fine" id="c-hint">Калорийность есть на упаковке. Можно и на глаз, прибор всё равно узнает.</p>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Протокол дня</h2><span class="aside" id="log-count"></span></div>
+      <ul class="log" id="log"></ul>
+    </section>
+  </section>
+
+  <section class="view" id="view-dyn" aria-label="Динамика" hidden>
+    <div class="view-h">
+      <h2 class="title">Динамика</h2>
+      <div class="seg" role="group" aria-label="Период">
+        <button type="button" data-act="range" data-n="7" aria-pressed="true">7 дней</button>
+        <button type="button" data-act="range" data-n="30" aria-pressed="false">30 дней</button>
+      </div>
+    </div>
+    <div class="chart-card" id="chart"></div>
+    <div class="strip" id="dyn-cta" hidden>
+      <span>Это пример. Твоя динамика появится после первых записей.</span>
+      <button class="btn sm" type="button" data-act="go-add">Записать еду</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <p class="summary" id="summary"></p>
+    <div class="legend" id="legend"></div>
+    <section class="sec" id="aw-sec">
+      <div class="sec-h"><h2>Награды</h2><span class="aside" id="aw-count"></span></div>
+      <div class="aw-card" id="aw-card"></div>
+      <div class="medals" id="medals"></div>
+    </section>
+    <section class="sec" id="hist-sec">
+      <div class="sec-h"><h2>По дням</h2><span class="aside">нажми, чтобы открыть день</span></div>
+      <ul class="hist" id="hist"></ul>
+    </section>
+  </section>
+
+  <section class="view" id="view-team" aria-label="Компания" hidden>
+    <div class="view-h"><h2 class="title">Компания</h2></div>
+    <p class="lede">Тут видно, как дела у всех в твоей компании. Подглядывать в чужую тарелку разрешено, ради этого всё и затевалось.</p>
+    <div id="lead"></div>
+    <div class="people" id="people"></div>
+    <div id="sync"></div>
+  </section>
+</div>
+
+<nav class="tabbar" aria-label="Разделы">
+  <div class="tabbar-in" role="tablist">
+    <button class="tab" type="button" role="tab" data-act="tab" data-view="today" aria-controls="view-today" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/><path d="M12 14.5l4-4.5"/><circle cx="12" cy="14.5" r="1.3" fill="currentColor"/></svg>
+      <span>Сегодня</span>
+    </button>
+    <button class="tab" type="button" role="tab" data-act="tab" data-view="dyn" aria-controls="view-dyn" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 20.5h18M6 17v-5M10.5 17V7M15 17v-7M19.5 17V5"/></svg>
+      <span>Динамика</span>
+    </button>
+    <button class="tab" type="button" role="tab" data-act="tab" data-view="team" aria-controls="view-team" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.7-3.2 2.9-5 5.5-5s4.8 1.8 5.5 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M15.8 14.6c2.3-.2 4.1 1.3 4.7 4.4"/></svg>
+      <span>Компания</span>
+    </button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" hidden><span id="toast-msg"></span><button type="button" id="toast-undo" data-act="undo">Отменить</button></div>
+
+<div class="backdrop" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">
+    <div class="sh-head">
+      <h2 id="sh-t">Настройка прибора</h2>
+      <button class="icon-btn" type="button" data-act="close-sheet" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <p class="tagline">Всё, что ты съешь, может быть использовано против тебя.</p>
+    <div class="field">
+      <label for="f-nick">Позывной</label>
+      <input class="inp" id="f-nick" maxlength="24" placeholder="Например, Пончик">
+      <p class="fine">Так тебя увидит компания.</p>
+    </div>
+    <div class="field">
+      <label for="f-norm">Дневная норма, ккал</label>
+      <input class="inp" id="f-norm" inputmode="numeric" maxlength="4">
+      <div class="presets" id="presets">
+        <button type="button" data-act="preset" data-v="1600">1 600</button>
+        <button type="button" data-act="preset" data-v="1800">1 800</button>
+        <button type="button" data-act="preset" data-v="2000">2 000</button>
+        <button type="button" data-act="preset" data-v="2200">2 200</button>
+        <button type="button" data-act="preset" data-v="2500">2 500</button>
+      </div>
+      <p class="fine err" id="f-err" hidden>Норма от 1 200 до 6 000 ккал. Меньше 1 200 без присмотра врача вредно.</p>
+    </div>
+    <details class="calc" id="calc">
+      <summary>Не знаю свою норму, посчитать</summary>
+      <div class="calc-grid">
+        <div class="field wide">
+          <span class="grp-l" id="sx-l">Пол</span>
+          <div class="sex" role="radiogroup" aria-labelledby="sx-l">
+            <label><input type="radio" name="sx" id="sx-m" value="m" checked> Мужской</label>
+            <label><input type="radio" name="sx" id="sx-f" value="f"> Женский</label>
+          </div>
+        </div>
+        <div class="field"><label for="c-age">Возраст</label><input class="inp" id="c-age" inputmode="numeric" maxlength="3" placeholder="35"></div>
+        <div class="field"><label for="c-h">Рост, см</label><input class="inp" id="c-h" inputmode="numeric" maxlength="3" placeholder="175"></div>
+        <div class="field"><label for="c-w">Вес, кг</label><input class="inp" id="c-w" inputmode="decimal" maxlength="5" placeholder="80"></div>
+        <div class="field"><label for="c-goal">Цель</label>
+          <select class="inp" id="c-goal"><option value="0.85">Похудеть</option><option value="1" selected>Держать вес</option><option value="1.1">Набрать</option></select>
+        </div>
+        <div class="field wide"><label for="c-act">Активность</label>
+          <select class="inp" id="c-act">
+            <option value="1.2">Сидячая работа, спорт по праздникам</option>
+            <option value="1.375">Лёгкая: прогулки, 1–3 тренировки в неделю</option>
+            <option value="1.55" selected>Средняя: 3–5 тренировок в неделю</option>
+            <option value="1.725">Высокая: спорт почти каждый день</option>
+          </select>
+        </div>
+      </div>
+      <div class="calc-out"><span>Норма ≈ <b id="calc-res">—</b> ккал</span><button class="btn sm" type="button" id="calc-use" data-act="use-calc" disabled>Взять</button></div>
+      <p class="fine">Формула Миффлина — Сан Жеора. Это оценка, а не назначение врача.</p>
+    </details>
+    <div class="field">
+      <span class="grp-l" id="th-l">Оформление</span>
+      <div class="seg three" role="group" aria-labelledby="th-l" id="theme-seg">
+        <button type="button" data-act="theme" data-v="light" aria-pressed="false">Светлое</button>
+        <button type="button" data-act="theme" data-v="dark" aria-pressed="false">Тёмное</button>
+        <button type="button" data-act="theme" data-v="auto" aria-pressed="true">Как в телефоне</button>
+      </div>
+      <p class="fine">Меняется сразу, сохранять не нужно.</p>
+    </div>
+    <p class="sync-note" id="sync-note"></p>
+    <button class="btn wide" type="button" data-act="save-settings">Сохранить</button>
+  </div>
+</div>
+
+<div class="backdrop" id="dish" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dish-t">
+    <div class="sh-head">
+      <h2 id="dish-t" tabindex="-1">Моё блюдо</h2>
+      <button class="icon-btn" type="button" data-act="close-dish" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <p class="tagline">То, что ешь часто. Один раз записать, дальше одно касание.</p>
+    <div class="field">
+      <span class="grp-l" id="d-em-l">Значок</span>
+      <div class="emojis" id="d-em" role="group" aria-labelledby="d-em-l"></div>
+    </div>
+    <div class="field">
+      <label for="d-name">Название</label>
+      <input class="inp" id="d-name" maxlength="60" placeholder="Например, творог с ягодами" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="d-kcal">Калорий в порции</label>
+      <input class="inp" id="d-kcal" inputmode="numeric" maxlength="4" placeholder="ккал" autocomplete="off">
+    </div>
+    <p class="fine err" id="d-err" role="alert" hidden></p>
+    <button class="btn wide" type="button" data-act="dish-save">Сохранить</button>
+    <button class="btn ghost wide" type="button" id="d-del" data-act="dish-del" hidden>Убрать из «Моих блюд»</button>
+  </div>
+</div>
+
+<div class="backdrop" id="award" hidden>
+  <div class="sheet award" role="dialog" aria-modal="true" aria-labelledby="aw-t">
+    <p class="aw-kick">Новая награда!</p>
+    <div class="aw-big" id="aw-big" aria-hidden="true"></div>
+    <h2 id="aw-t"></h2>
+    <p class="aw-cond" id="aw-cond"></p>
+    <p class="tagline" id="aw-joke"></p>
+    <button class="btn wide" type="button" id="aw-ok" data-act="close-award">Принять с достоинством</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* ================= helpers ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const pad = n => String(n).padStart(2, '0');
+const dkey = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const isDateKey = k => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(k);
+const parseKey = k => { const p = k.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+const addDays = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return dkey(d); };
+const TODAY = () => dkey(new Date());
+const NF = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+const fmt = n => NF.format(Math.round(n));
+const f1 = n => Math.round(n * 10) / 10;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const nowHM = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const hash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+const pick = (arr, seed) => arr[hash(String(seed)) % arr.length];
+function plural(n, f) {
+  if (!Number.isInteger(n)) return f[1];
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return f[2];
+  if (b > 1 && b < 5) return f[1];
+  if (b === 1) return f[0];
+  return f[2];
+}
+function joinNames(list) { return list.length < 2 ? list.join('') : list.slice(0, -1).join(', ') + ' и ' + list[list.length - 1]; }
+const NORM_MIN = 1200, NORM_MAX = 6000, NORM_DEF = 2000;
+const clampNorm = v => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= NORM_MIN && v <= NORM_MAX ? v : NORM_DEF; };
+const sumItems = items => (items || []).reduce((a, it) => a + (Number(it.k) || 0), 0);
+function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* storage is off in this view */ } }
+
+const WD = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+const WD_FULL = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+const MON_G = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const MON_S = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+function dayTitle(k) {
+  const t = TODAY();
+  if (k === t) return 'Сегодня';
+  if (k === addDays(t, -1)) return 'Вчера';
+  if (k === addDays(t, -2)) return 'Позавчера';
+  return WD_FULL[parseKey(k).getDay()];
+}
+const dateLong = k => { const d = parseKey(k); return d.getDate() + ' ' + MON_G[d.getMonth()]; };
+function daySub(k) { const d = parseKey(k); return k >= addDays(TODAY(), -2) ? WD[d.getDay()] + ', ' + dateLong(k) : dateLong(k); }
+const dayShort = k => { const d = parseKey(k); return WD[d.getDay()] + ', ' + d.getDate() + ' ' + MON_S[d.getMonth()]; };
+
+/* ================= content ================= */
+const FOODS = [
+  { e: '☕', n: 'Капучино', k: 110 },
+  { e: '🥣', n: 'Овсянка на молоке', k: 260 },
+  { e: '🥪', n: 'Бутерброд с колбасой', k: 230 },
+  { e: '🍗', n: 'Курица с гречкой', k: 450 },
+  { e: '🍲', n: 'Борщ со сметаной', k: 190 },
+  { e: '🍌', n: 'Банан', k: 105 },
+  { e: '🍎', n: 'Яблоко', k: 80 },
+  { e: '🌯', n: 'Шаурма', k: 600 },
+  { e: '🍩', n: 'Пончик', k: 250 },
+  { e: '🍳', n: 'Яичница из 2 яиц', k: 200 },
+  { e: '🥗', n: 'Овощной салат', k: 120 },
+  { e: '🥟', n: 'Пельмени, 15 шт', k: 450 },
+  { e: '🍕', n: 'Кусок пиццы', k: 280 },
+  { e: '🍔', n: 'Бургер', k: 500 },
+  { e: '🍜', n: 'Лапша из пакета', k: 400 },
+  { e: '🍰', n: 'Кусок торта', k: 350 },
+  { e: '🍫', n: 'Шоколадка 100 г', k: 540 },
+  { e: '🍪', n: 'Печенька', k: 60 },
+  { e: '🥤', n: 'Газировка 0,33 л', k: 140 },
+  { e: '🥛', n: 'Кефир, стакан', k: 130 },
+  { e: '🥒', n: 'Огурец', k: 15 }
+];
+const EQUIV = [
+  { f: ['огурец', 'огурца', 'огурцов'], k: 15 },
+  { f: ['яблоко', 'яблока', 'яблок'], k: 80 },
+  { f: ['банан', 'банана', 'бананов'], k: 105 },
+  { f: ['пончик', 'пончика', 'пончиков'], k: 250 },
+  { f: ['кусок пиццы', 'куска пиццы', 'кусков пиццы'], k: 280 },
+  { f: ['пачка лапши', 'пачки лапши', 'пачек лапши'], k: 400 },
+  { f: ['шоколадка', 'шоколадки', 'шоколадок'], k: 540 },
+  { f: ['шаурма', 'шаурмы', 'шаурм'], k: 600 }
+];
+function equiv(kcal, seed) {
+  if (kcal < 12) return 'пара крошек';
+  const opts = [];
+  for (const e of EQUIV) { const n = Math.round(kcal / e.k * 2) / 2; if (n >= 1 && n <= 6) opts.push({ e, n }); }
+  if (!opts.length) { const e = EQUIV[EQUIV.length - 1], n = Math.round(kcal / e.k); return n + ' ' + plural(n, e.f); }
+  const o = pick(opts, seed);
+  return String(o.n).replace('.', ',') + ' ' + plural(o.n, o.e.f);
+}
+
+/* verdicts: closed days get a final grade, today gets a live one */
+const VMETA = {
+  idle: { label: 'Холодильник скучает', st: 'sleep' },
+  run: { label: 'По графику', st: 'calm' },
+  leaf: { label: 'Фотосинтез', st: 'leaf' },
+  good: { label: 'Молодец', st: 'good' },
+  crown: { label: 'Золотая середина', st: 'crown' },
+  meh: { label: 'Простительно', st: 'meh' },
+  hamster: { label: 'Хомяк', st: 'hamster' },
+  hole: { label: 'Чёрная дыра', st: 'hole' },
+  skip: { label: 'Прогул', st: 'sleep' }
+};
+function closedVerdict(total, norm) {
+  if (!total) return 'skip';
+  const r = total / norm;
+  if (r < 0.70) return 'leaf';
+  if (r < 0.90) return 'good';
+  if (r <= 1.05) return 'crown';
+  if (r <= 1.15) return 'meh';
+  if (r <= 1.40) return 'hamster';
+  return 'hole';
+}
+function liveVerdict(total, norm) {
+  if (!total) return 'idle';
+  return total / norm < 0.90 ? 'run' : closedVerdict(total, norm);
+}
+const GOOD = v => v === 'crown' || v === 'good';
+const BAD = v => v === 'hamster' || v === 'hole';
+
+const LIVE = {
+  idle: ['Чистый лист. Холодильник ждёт твоего первого хода.', 'Ноль калорий. Либо ты святой, либо ещё не записал завтрак.', 'Пока ни крошки. Прибор бдит.'],
+  run: ['Идёшь по графику. Диетолог бы одобрительно кивнул.', 'Полёт нормальный. Остаток тратить с умом.', 'Всё чинно и благородно. Пока что.'],
+  crown: ['В яблочко! Закрывай кухню и иди гордиться собой.', 'Идеальное попадание. Можно вешать медаль на холодильник.', 'Норма взята. Дальше только вода и самоуважение.'],
+  meh: ['Чуть сверху. Сделаем вид, что это был праздник.', 'Перебор простительный. Особенно если это был торт.'],
+  hamster: ['Хомяк-режим включён. Щёки уже не влезают в кадр.', 'Холодильник просит пощады. Пощади его.', 'Было вкусно? Надеемся. Прибор всё видел.'],
+  hole: ['Чёрная дыра. Учёные фиксируют аномалию на кухне.', 'Стрелка почти в упоре. Прибор в шоке.', 'Это уже не перекус, это эпоха.']
+};
+const PAST = {
+  skip: ['Ничего не записано. Подозрительно.', 'Прогул. Прибор обижен и молчит.'],
+  leaf: ['Маловато. Организм не кактус, его надо кормить.', 'Недобор. Даже фикусу нужно больше.'],
+  good: ['Чуть ниже нормы. Аккуратно и прилично.', 'Хороший день. Прибор доволен.'],
+  crown: ['Золотая середина. Корона заслужена.', 'Попадание в норму. Можно хвастаться.'],
+  meh: ['Слегка сверху. Простительно.', 'Чуть перебрал, но в рамках приличий.'],
+  hamster: ['Хомяк-день. Щёки помнят всё.', 'Перебор. Холодильник до сих пор в шоке.'],
+  hole: ['Чёрная дыра. Подробности засекречены.', 'День, который мы не обсуждаем.']
+};
+const ADD_TOAST = [
+  [120, ['Записал. Почти не считается. Почти.', 'Лёгкая закуска. Прибор зевнул.']],
+  [500, ['Записал. Всё под протокол.', 'Принято к сведению.']],
+  [900, ['Записал. Стрелка дёрнулась.', 'Солидно. Прибор уважает.']],
+  [Infinity, ['Записал. Прибор слегка вздрогнул.', 'Это была заявка на рекорд?']]
+];
+const DEL_TOAST = ['Вычеркнуто. Как будто и не было.', 'Стёрто из протокола. Свидетелей нет.'];
+const C_HINT = 'Калорийность есть на упаковке. Можно и на глаз, прибор всё равно узнает.';
+const DISH_EMOJI = ['🍽️', '🥣', '🍳', '🥗', '🍲', '🍝', '🍚', '🥩', '🍗', '🐟', '🥟', '🧀', '🍞', '🍎', '🥛', '☕'];
+
+/* awards: a good day is a closed day in the "good" or "golden" zone (70–105 % of the norm) */
+const AWARDS = [
+  { id: 's3', streak: 3, tier: 'bronze', name: 'Разминка', joke: 'Три дня в норме. Колобок начал что-то подозревать.' },
+  { id: 's7', streak: 7, tier: 'bronze', name: 'Железная неделя', joke: 'Неделя в норме. Холодильник пишет жалобу на простой.' },
+  { id: 's14', streak: 14, tier: 'silver', name: 'Две недели дзена', joke: 'Две недели. Диетолог пересматривает свои взгляды на жизнь.' },
+  { id: 's20', streak: 20, tier: 'silver', name: 'Двадцатка', joke: 'Двадцать дней. Это уже не случайность, это характер.' },
+  { id: 's30', streak: 30, tier: 'gold', name: 'Месяц-кремень', joke: 'Месяц в норме. Хомяк подал в отставку.' },
+  { id: 's50', streak: 50, tier: 'gold', name: 'Полтинник воли', joke: 'Пятьдесят дней. Про тебя пишут в кулинарных хрониках.' },
+  { id: 's100', streak: 100, tier: 'legend', name: 'Легенда холодильника', joke: 'Сто дней. Холодильник открывается только с твоего разрешения.' },
+  { id: 'crown1', g: '👑', tier: 'gold', name: 'Первая корона', cond: 'День в золотой середине', joke: 'Первая корона. Примерь, тебе идёт.' },
+  { id: 'sniper', g: '🎯', tier: 'silver', name: 'Снайпер', cond: 'Попасть в норму ±15 ккал', joke: 'В норму с точностью до огурца. Прибор аплодирует стоя.' },
+  { id: 'nohamster', g: '🏖️', tier: 'silver', name: 'Хомяк в отпуске', cond: '7 дней подряд без хомяков и чёрных дыр', joke: 'Неделя без переборов. Хомяк уехал на море и не вернётся.' },
+  { id: 'crown10', g: '💎', tier: 'gold', name: 'Коронованная особа', cond: '10 дней в золотой середине', joke: 'Десять корон. Можно открывать музей.' },
+  { id: 'log30', g: '📜', tier: 'bronze', name: 'Летописец', cond: '30 дней с записями', joke: 'Тридцать дней под протоколом. Историки завидуют.' }
+];
+const AWARD_IDS = new Set(AWARDS.map(a => a.id));
+const SNIPER = 15; /* kcal: "right on the norm" for the day screen and the award */
+const STREAK_AWARDS = AWARDS.filter(a => a.streak);
+const TIER = { bronze: ['#E7A061', '#B8692F'], silver: ['#DCE3EA', '#8E9BA8'], gold: ['#FFD23F', '#C99400'], legend: ['#C3A2FF', '#6B2FA3'] };
+const awardCond = a => a.streak ? `${a.streak} ${plural(a.streak, ['хороший день', 'хороших дня', 'хороших дней'])} подряд` : a.cond;
+
+/* ================= Kolobok stickers ================= */
+const K = {
+  body: '<circle class="body" cx="50" cy="57" r="33"/>',
+  shade: '<path class="shade" d="M81 68.3A33 33 0 0 1 19 68.3A40 40 0 0 0 81 68.3Z"/>',
+  shine: '<path class="shine" d="M31 45Q35 33 47 29"/>',
+  cheeks: '<ellipse class="cheek" cx="30" cy="65" rx="6" ry="4"/><ellipse class="cheek" cx="70" cy="65" rx="6" ry="4"/>',
+  eyes: '<circle class="ink" cx="40" cy="54" r="4.3"/><circle class="ink" cx="60" cy="54" r="4.3"/><circle class="hl" cx="41.6" cy="52.4" r="1.4"/><circle class="hl" cx="61.6" cy="52.4" r="1.4"/>',
+  edge: '<circle cx="50" cy="57" r="33"/>'
+};
+function spark(x, y, s) {
+  const a = f1(7 * s), b = f1(2 * s);
+  return `<path class="gold" d="M${x} ${f1(y - a)}L${f1(x + b)} ${f1(y - b)}L${f1(x + a)} ${y}L${f1(x + b)} ${f1(y + b)}L${x} ${f1(y + a)}L${f1(x - b)} ${f1(y + b)}L${f1(x - a)} ${y}L${f1(x - b)} ${f1(y - b)}Z"/>`;
+}
+const CROWN_D = 'M31 32L35 13L44 23L50 7L56 23L65 13L69 32Z';
+const DROP_D = 'M79 33Q86 43 79 48Q72 43 79 33Z';
+const LEAF_L = 'M50 18Q37 8 28 15Q38 25 50 18Z', LEAF_R = 'M51 13Q62 2 73 8Q65 19 51 13Z', STEM = 'M50 26Q49 16 51 9';
+const RING = 'cx="50" cy="57" rx="47" ry="12" transform="rotate(-16 50 57)"';
+const BASE = K.body + K.shade + K.shine + K.cheeks;
+const KB = {
+  calm: { edge: K.edge, art: BASE + K.eyes + '<path class="ln" d="M44 66Q50 71 56 66"/>' },
+  good: { edge: K.edge + '<circle cx="85" cy="25" r="8"/>', art: BASE + K.eyes + '<path class="ln" d="M40 65Q50 76 60 65"/>' + spark(85, 25, 0.9) },
+  crown: {
+    edge: K.edge + `<path d="${CROWN_D}"/><circle cx="86" cy="32" r="8"/><circle cx="13" cy="42" r="6"/>`,
+    art: BASE + '<path class="ln" d="M34 55Q40 48 46 55"/><path class="ln" d="M54 55Q60 48 66 55"/><path class="mouth" d="M38 63Q50 81 62 63Z"/><path class="tongue" d="M44 71Q50 77 56 71Q50 67.5 44 71Z"/>'
+      + `<path class="gold" d="${CROWN_D}"/><circle class="jewel" cx="50" cy="25" r="2.6"/><circle class="jewel" cx="38.5" cy="27" r="1.8"/><circle class="jewel" cx="61.5" cy="27" r="1.8"/>`
+      + spark(86, 32, 0.9) + spark(13, 42, 0.7)
+  },
+  meh: {
+    edge: K.edge + `<path d="${DROP_D}"/>`,
+    art: BASE + '<circle class="ink" cx="40" cy="55" r="4.3"/><circle class="hl" cx="41.6" cy="53.4" r="1.4"/><path class="ink" d="M55.7 56A4.3 4.3 0 0 0 64.3 56Z"/><path class="ln" d="M54.5 56H65.5"/><path class="ln" d="M33 45Q39 40 46 43"/><path class="ln" d="M42 69Q51 71 59 64"/>'
+      + `<path class="drop" d="${DROP_D}"/>`
+  },
+  hamster: {
+    edge: '<ellipse cx="50" cy="58" rx="38" ry="31"/>',
+    art: '<ellipse class="body" cx="50" cy="58" rx="38" ry="31"/><path class="shade" d="M86 68A38 31 0 0 1 14 68A46 37 0 0 0 86 68Z"/><path class="shine" d="M27 47Q32 35 45 31"/>'
+      + '<ellipse class="cheek-big" cx="27" cy="67" rx="12" ry="10"/><ellipse class="cheek-big" cx="73" cy="67" rx="12" ry="10"/>'
+      + '<path class="ln" d="M36 50L43 54L36 58"/><path class="ln" d="M64 50L57 54L64 58"/><path class="ln" d="M43 67Q46.5 72 50 67Q53.5 72 57 67"/>'
+      + '<circle class="crumb" cx="38" cy="85" r="2.2"/><circle class="crumb" cx="60" cy="87" r="1.8"/><circle class="crumb" cx="67" cy="82" r="1.5"/>'
+  },
+  hole: {
+    edge: K.edge + `<ellipse ${RING}/>`,
+    art: `<ellipse class="ring" ${RING}/><circle class="body-hole" cx="50" cy="57" r="33"/><path class="swirl" d="M50 58q6-1 6 5q0 9-11 9q-14 0-14-14q0-18 20-18q21 0 23 22"/>`
+      + '<path class="ring" d="M3 57A47 12 0 0 0 97 57" transform="rotate(-16 50 57)"/>'
+      + '<circle class="eyew" cx="39" cy="49" r="6.5"/><circle class="ink" cx="39" cy="50" r="2.2"/><circle class="eyew" cx="61" cy="49" r="6.5"/><circle class="ink" cx="61" cy="50" r="2.2"/>'
+      + '<ellipse class="eyew" cx="50" cy="70" rx="4.5" ry="5.5"/><circle class="star" cx="12" cy="20" r="1.8"/><circle class="star" cx="90" cy="86" r="1.5"/><circle class="star" cx="88" cy="16" r="1.3"/>'
+  },
+  leaf: {
+    edge: K.edge + `<path d="${LEAF_L}"/><path d="${LEAF_R}"/><path d="${STEM}"/>`,
+    art: `<path class="ln" d="${STEM}"/><path class="leafp" d="${LEAF_L}"/><path class="leafp" d="${LEAF_R}"/><circle class="body-pale" cx="50" cy="57" r="33"/>` + K.shine
+      + '<path class="ln" d="M33 49L45 45.5"/><path class="ln" d="M55 45.5L67 49"/><circle class="ink" cx="40" cy="56" r="3.6"/><circle class="ink" cx="60" cy="56" r="3.6"/><path class="ln" d="M43 70Q50 64 57 70"/>'
+  },
+  sleep: {
+    edge: K.edge + '<text class="zz" x="70" y="31">z</text><text class="zz big" x="80" y="17">Z</text>',
+    art: BASE + '<path class="ln" d="M34 55Q40 60 46 55"/><path class="ln" d="M54 55Q60 60 66 55"/><ellipse class="ink" cx="50" cy="67" rx="2.8" ry="3.4"/><text class="zz" x="70" y="31">z</text><text class="zz big" x="80" y="17">Z</text>'
+  }
+};
+function kb(st, attrs) {
+  const p = KB[st] || KB.calm;
+  return `<svg class="kb" viewBox="-8 -8 116 116" ${attrs || ''} aria-hidden="true" focusable="false"><g class="edge">${p.edge}</g>${p.art}</svg>`;
+}
+/* medal: two ribbons and a disc with the number of days or a glyph; a locked one is drawn grey */
+function medal(a, on) {
+  const c = TIER[a.tier] || TIER.bronze, long = a.streak >= 100;
+  const mark = a.streak
+    ? `<text class="num${long ? ' long' : ''}" x="50" y="${long ? 84 : 86}" text-anchor="middle">${a.streak}</text>`
+    : `<text class="gly" x="50" y="87" text-anchor="middle">${a.g}</text>`;
+  return `<svg class="md${on ? '' : ' off'}" viewBox="-4 -4 108 128" aria-hidden="true" focusable="false">`
+    + '<path class="rb" d="M26 2H46L56 44H36Z" fill="#E8392B"/><path class="rb" d="M74 2H54L44 44H64Z" fill="#4AB3E0"/>'
+    + `<circle class="dsc" cx="50" cy="78" r="34" fill="${c[0]}"/><circle class="rim" cx="50" cy="78" r="26" stroke="${c[1]}"/>`
+    + '<path class="shn" d="M29 70Q32 56 45 51"/>' + mark + '</svg>';
+}
+const PEN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+
+/* ================= dial ================= */
+const G = { cx: 150, cy: 150, vmax: 1.6, a0: 135, sweep: 270 };
+const gAng = v => G.a0 + Math.min(Math.max(v, 0), G.vmax) / G.vmax * G.sweep;
+const gPt = (a, r) => { const t = a * Math.PI / 180; return [G.cx + r * Math.cos(t), G.cy + r * Math.sin(t)]; };
+function gArc(v1, v2, r) {
+  const a1 = gAng(v1), a2 = gAng(v2), p1 = gPt(a1, r), p2 = gPt(a2, r);
+  return `M${f1(p1[0])} ${f1(p1[1])}A${r} ${r} 0 ${a2 - a1 > 180 ? 1 : 0} 1 ${f1(p2[0])} ${f1(p2[1])}`;
+}
+const ZONES = [[0, 0.7, 'leaf'], [0.7, 0.9, 'good'], [0.9, 1.05, 'crown'], [1.05, 1.15, 'meh'], [1.15, 1.4, 'hamster'], [1.4, 1.6, 'hole']];
+function buildDial(norm) {
+  let s = '<svg class="dial" viewBox="0 0 300 300" role="img" aria-label="Шкала: сколько съедено от дневной нормы">';
+  s += '<circle class="g-face" cx="150" cy="150" r="144"/><circle class="g-inner" cx="150" cy="150" r="134"/>';
+  for (const z of ZONES) s += `<path class="g-zone" d="${gArc(z[0], z[1], 110)}" style="stroke:var(--v-${z[2]})"/>`;
+  for (let i = 0; i <= 32; i++) {
+    const a = gAng(i * 0.05), major = i % 10 === 0, mid = i % 2 === 0;
+    const p1 = gPt(a, major ? 115 : mid ? 121 : 125), p2 = gPt(a, 132);
+    s += `<line class="g-tick${major ? ' maj' : ''}" x1="${f1(p1[0])}" y1="${f1(p1[1])}" x2="${f1(p2[0])}" y2="${f1(p2[1])}"/>`;
+  }
+  for (const v of [0, 0.5, 1, 1.5]) {
+    const p = gPt(gAng(v), 84);
+    s += `<text class="g-lbl${v === 1 ? ' one' : ''}" x="${f1(p[0])}" y="${f1(p[1] + 4.5)}" text-anchor="middle">${fmt(v * norm)}</text>`;
+  }
+  s += '<text class="g-plate" x="150" y="121" text-anchor="middle">ЖМ-1 · ККАЛ</text>';
+  s += `<g class="g-needle" id="needle" style="transform:rotate(${G.a0}deg)"><g class="g-wob"><path class="g-nd" d="M130 150L150 144.5L262 150L150 155.5Z"/></g></g>`;
+  s += '<circle class="g-cap" cx="150" cy="150" r="12"/><circle class="g-cap-hl" cx="146.5" cy="146.5" r="3.5"/>';
+  s += '<text class="g-read" id="g-read" x="150" y="227" text-anchor="middle">0</text>';
+  s += `<text class="g-sub" x="150" y="249" text-anchor="middle">из ${fmt(norm)} ккал</text>`;
+  return s + '</svg>';
+}
+
+/* ================= charts ================= */
+function barVar(d) { return d.isToday && d.v === 'run' ? 'good' : d.v; }
+function barChart(ser, norm, wide) {
+  const W = 340, H = wide ? 226 : 190, L0 = 38, R0 = 6, T0 = wide ? 36 : 12, B0 = 22;
+  const pw = W - L0 - R0, ph = H - T0 - B0;
+  const maxT = Math.max(norm * 1.3, ...ser.map(d => d.total));
+  const step = maxT > 4600 ? 1000 : 500;
+  const ymax = Math.ceil(maxT * 1.04 / step) * step;
+  const Y = v => T0 + ph - v / ymax * ph;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Калории по дням за ${ser.length} дней. Пунктир показывает норму.">`;
+  const gstep = ymax / step > 6 ? step * 2 : step;
+  for (let g = 0; g <= ymax + 1; g += gstep) {
+    const y = f1(Y(g));
+    s += `<line class="gl" x1="${L0}" x2="${W - R0}" y1="${y}" y2="${y}"/>`;
+    if (Math.abs(g - norm) > ymax * 0.06) s += `<text class="ax" x="${L0 - 6}" y="${f1(Y(g) + 3.5)}" text-anchor="end">${fmt(g)}</text>`;
+  }
+  s += `<rect class="gz" x="${L0}" y="${f1(Y(norm * 1.05))}" width="${pw}" height="${f1(Y(norm * 0.9) - Y(norm * 1.05))}"/>`;
+  const n = ser.length, band = pw / n, bw = band * (wide ? 0.56 : 0.64), rx = wide ? 5 : 2;
+  let stickers = '';
+  ser.forEach((d, i) => {
+    const x = L0 + i * band + (band - bw) / 2, cx = x + bw / 2;
+    let top = Y(0);
+    if (d.has) {
+      top = Y(d.total);
+      s += `<rect class="bar${d.isToday ? ' today' : ''}" x="${f1(x)}" y="${f1(top)}" width="${f1(bw)}" height="${f1(Y(0) - top)}" rx="${rx}" style="fill:var(--v-${barVar(d)})"/>`;
+    } else {
+      s += `<rect class="stub" x="${f1(x)}" y="${f1(Y(0) - 3)}" width="${f1(bw)}" height="3" rx="1.5"/>`;
+    }
+    if (wide) {
+      stickers += kb(VMETA[d.v].st, `x="${f1(cx - 14)}" y="${f1(Math.max(1, top - 31))}" width="28" height="28"`);
+      const dt = parseKey(d.k);
+      s += `<text class="ax${d.isToday ? ' now' : ''}" x="${f1(cx)}" y="${H - 6}" text-anchor="middle">${d.isToday ? 'сег' : WD[dt.getDay()] + ' ' + dt.getDate()}</text>`;
+    } else if ((n - 1 - i) % 5 === 0) {
+      s += `<text class="ax${d.isToday ? ' now' : ''}" x="${f1(cx)}" y="${H - 6}" text-anchor="middle">${d.isToday ? 'сег' : parseKey(d.k).getDate()}</text>`;
+    }
+  });
+  const ny = f1(Y(norm));
+  s += `<line class="nl" x1="${L0}" x2="${W - R0}" y1="${ny}" y2="${ny}"/>`;
+  s += `<text class="nlbl" x="${L0 - 6}" y="${f1(Y(norm) + 3.5)}" text-anchor="end">${fmt(norm)}</text>`;
+  return s + stickers + '</svg>';
+}
+function miniChart(ser, norm) {
+  const W = 154, H = 40, n = ser.length, band = W / n, bw = band * 0.6;
+  const ymax = Math.max(norm * 1.5, ...ser.map(d => d.total)) * 1.02;
+  const Y = v => H - 2 - v / ymax * (H - 4);
+  let s = `<svg class="mini" viewBox="0 0 ${W} ${H}" aria-hidden="true">`;
+  ser.forEach((d, i) => {
+    const x = i * band + (band - bw) / 2;
+    if (d.has) { const t = Y(d.total); s += `<rect class="mb${d.isToday ? ' today' : ''}" x="${f1(x)}" y="${f1(t)}" width="${f1(bw)}" height="${f1(Y(0) - t)}" rx="2" style="fill:var(--v-${barVar(d)})"/>`; }
+    else s += `<rect class="stub" x="${f1(x)}" y="${f1(Y(0) - 2)}" width="${f1(bw)}" height="2" rx="1"/>`;
+  });
+  const ny = f1(Y(norm));
+  return s + `<line class="mn" x1="0" x2="${W}" y1="${ny}" y2="${ny}"/></svg>`;
+}
+
+/* ================= day math ================= */
+function series(days, norm, endKey, n) {
+  const t = TODAY(), out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const k = addDays(endKey, -i), day = days[k];
+    const items = day && Array.isArray(day.items) ? day.items : [];
+    const total = sumItems(items), has = items.length > 0, isToday = k === t;
+    const dn = isToday ? norm : (day && day.norm) || norm;
+    out.push({ k, total, norm: dn, has, isToday, v: isToday ? liveVerdict(total, dn) : closedVerdict(total, dn) });
+  }
+  return out;
+}
+function streak(days, norm) {
+  let s = 0, k = addDays(TODAY(), -1);
+  for (let i = 0; i < 400; i++) {
+    const day = days[k], items = day ? day.items : [];
+    if (!items || !items.length) break;
+    if (!GOOD(closedVerdict(sumItems(items), day.norm || norm))) break;
+    s++; k = addDays(k, -1);
+  }
+  return s;
+}
+/* everything the awards need, from closed days only: today still counts as open */
+function awardStats(days, norm) {
+  const t = TODAY(), keys = Object.keys(days).filter(k => k < t && days[k].items && days[k].items.length).sort();
+  const st = { cur: streak(days, norm), best: 0, crowns: 0, sniper: false, calmBest: 0, logged: keys.length };
+  let run = 0, calm = 0, prev = '';
+  for (const k of keys) {
+    const d = days[k], total = sumItems(d.items), n = d.norm || norm, v = closedVerdict(total, n);
+    const next = prev && addDays(prev, 1) === k;
+    run = GOOD(v) ? (next ? run + 1 : 1) : 0;
+    calm = BAD(v) ? 0 : (next ? calm + 1 : 1);
+    if (run > st.best) st.best = run;
+    if (calm > st.calmBest) st.calmBest = calm;
+    if (v === 'crown') st.crowns++;
+    if (Math.abs(total - n) <= SNIPER) st.sniper = true;
+    prev = k;
+  }
+  return st;
+}
+function awardEarned(a, st) {
+  if (a.streak) return st.best >= a.streak;
+  if (a.id === 'crown1') return st.crowns >= 1;
+  if (a.id === 'crown10') return st.crowns >= 10;
+  if (a.id === 'sniper') return st.sniper;
+  if (a.id === 'nohamster') return st.calmBest >= 7;
+  if (a.id === 'log30') return st.logged >= 30;
+  return false;
+}
+const SAMPLE_R = [0.97, 1.03, 0.86, 1.22, 0.95, 1.47, 0.92, 1.09, 0.88, 0.99, 1.31, 0.91, 0.63, 1.01, 0.94, 1.12, 0, 0.98, 1.18, 0.93, 1.02, 0.79, 1.56, 0.96, 0.9, 1.04, 0.87, 1.17, 0.95, 0.99, 0.62];
+const SAMPLE_TODAY = [
+  { id: 's1', t: '08:15', e: '🥣', n: 'Овсянка на молоке', k: 260 },
+  { id: 's2', t: '10:40', e: '☕', n: 'Капучино', k: 110 },
+  { id: 's3', t: '13:20', e: '🌯', n: 'Шаурма', k: 600 },
+  { id: 's4', t: '16:05', e: '🍎', n: 'Яблоко', k: 80 }
+];
+function sampleDays(norm, shift) {
+  const out = {}, t = TODAY();
+  for (let i = 1; i <= 31; i++) {
+    const r = SAMPLE_R[(i + shift) % SAMPLE_R.length];
+    if (!r) continue;
+    const k = addDays(t, -i), total = Math.round(norm * r / 10) * 10;
+    out[k] = { d: k, items: [{ id: 'x' + i, t: '12:00', e: '', n: 'Пример', k: total }], norm };
+  }
+  out[t] = { d: t, items: SAMPLE_TODAY.slice(0, shift ? 4 : 2), norm };
+  return out;
+}
+
+/* ================= data hygiene (shared data is untrusted) ================= */
+function cleanItems(arr) {
+  const list = Array.isArray(arr) ? arr : (arr && typeof arr === 'object' ? Object.values(arr) : []);
+  const out = [];
+  for (const it of list.slice(0, 200)) {
+    if (!it || typeof it !== 'object') continue;
+    const k = Math.round(Number(it.k));
+    if (!Number.isFinite(k) || k <= 0 || k > 20000) continue;
+    out.push({
+      id: typeof it.id === 'string' && it.id ? it.id.slice(0, 40) : uid(),
+      t: typeof it.t === 'string' && /^\d{2}:\d{2}$/.test(it.t) ? it.t : '—',
+      e: typeof it.e === 'string' ? it.e.slice(0, 8) : '',
+      n: typeof it.n === 'string' && it.n.trim() ? it.n.trim().slice(0, 60) : 'Без названия',
+      k
+    });
+  }
+  return out;
+}
+function cleanDay(o, id) {
+  if (!o || typeof o !== 'object') return null;
+  const d = isDateKey(o.d) ? o.d : (isDateKey(id) ? id : null);
+  if (!d) return null;
+  const items = cleanItems(o.items), nm = Math.round(Number(o.norm));
+  return { v: 1, d, items, total: sumItems(items), norm: Number.isFinite(nm) && nm >= 800 && nm <= 8000 ? nm : null, upd: Number(o.upd) || 0 };
+}
+function cleanDays(o) {
+  const out = {};
+  if (o && typeof o === 'object') for (const k of Object.keys(o)) { const d = cleanDay(o[k], k); if (d) out[d.d] = d; }
+  return out;
+}
+function cleanProfile(o) {
+  if (!o || typeof o !== 'object' || o.v !== 1) return null;
+  return { v: 1, nick: typeof o.nick === 'string' ? o.nick.trim().slice(0, 24) : '', norm: clampNorm(o.norm) };
+}
+
+/* ================= local store: the phone is the source of truth ================= */
+const IN_APP = /ZhrunometrApp/.test(navigator.userAgent) || typeof window.ZhrAndroid !== 'undefined';
+const CFG = window.ZHR_CONFIG && typeof window.ZHR_CONFIG === 'object' ? window.ZHR_CONFIG : {};
+const LS_KEY = 'zhrunometr:app:v1';
+const ID_ABC = 'abcdefghijkmnpqrstuvwxyz23456789';
+function randomId(n) {
+  const buf = new Uint8Array(n);
+  if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
+  else for (let i = 0; i < n; i++) buf[i] = Math.floor(Math.random() * 256);
+  let s = '';
+  for (let i = 0; i < n; i++) s += ID_ABC[buf[i] % 32];
+  return s;
+}
+const isId = s => typeof s === 'string' && /^[a-z0-9]{12}$/.test(s);
+const fmtCode = c => (c.match(/.{1,4}/g) || []).join('-');
+function freshLocal() {
+  return { member: randomId(12), profile: { nick: '', norm: NORM_DEF, set: false }, days: {}, unsynced: {}, profUnsynced: true, sync: { url: '', group: '' }, cache: null, fav: [], awards: {}, awardsNew: [] };
+}
+/* "My dishes" and earned awards live on this phone only, they are not sent to the company */
+const FAV_MAX = 24;
+function cleanFav(arr) {
+  const out = [], seen = new Set();
+  for (const f of Array.isArray(arr) ? arr.slice(0, FAV_MAX) : []) {
+    if (!f || typeof f !== 'object') continue;
+    const n = typeof f.n === 'string' ? f.n.trim().slice(0, 60) : '', k = Math.round(Number(f.k));
+    if (!n || !Number.isFinite(k) || k <= 0 || k > 5000) continue;
+    const key = favKey(n, k);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ id: typeof f.id === 'string' && f.id ? f.id.slice(0, 40) : uid(), e: typeof f.e === 'string' ? f.e.slice(0, 8) : '', n, k });
+  }
+  return out;
+}
+const favKey = (n, k) => String(n).trim().toLowerCase() + '|' + Math.round(k);
+function cleanCache(c) {
+  const people = {}, others = {};
+  if (c && c.people && typeof c.people === 'object') for (const k of Object.keys(c.people)) { const p = cleanProfile(c.people[k]); if (p && isId(k)) people[k] = p; }
+  if (c && c.others && typeof c.others === 'object') for (const k of Object.keys(c.others)) if (people[k]) others[k] = cleanDays(c.others[k]);
+  return { people, others, at: Number(c && c.at) || 0 };
+}
+function loadLocal() {
+  let o = null;
+  try { o = JSON.parse(lsGet(LS_KEY) || 'null'); } catch (e) { o = null; }
+  const l = freshLocal();
+  if (o && typeof o === 'object') {
+    if (isId(o.member)) l.member = o.member;
+    if (o.profile && typeof o.profile === 'object') {
+      l.profile.nick = typeof o.profile.nick === 'string' ? o.profile.nick.slice(0, 24) : '';
+      l.profile.norm = clampNorm(o.profile.norm);
+      l.profile.set = !!o.profile.set;
+    }
+    l.days = cleanDays(o.days);
+    if (o.unsynced && typeof o.unsynced === 'object') for (const k of Object.keys(o.unsynced)) if (isDateKey(k)) l.unsynced[k] = 1;
+    l.profUnsynced = o.profUnsynced !== false;
+    if (o.sync && typeof o.sync === 'object') {
+      l.sync.url = typeof o.sync.url === 'string' ? o.sync.url.slice(0, 200) : '';
+      l.sync.group = isId(o.sync.group) ? o.sync.group : '';
+    }
+    if (o.cache && typeof o.cache === 'object') l.cache = cleanCache(o.cache);
+    l.fav = cleanFav(o.fav);
+    if (o.awards && typeof o.awards === 'object') for (const k of Object.keys(o.awards)) if (AWARD_IDS.has(k) && isDateKey(o.awards[k])) l.awards[k] = o.awards[k];
+    if (Array.isArray(o.awardsNew)) l.awardsNew = o.awardsNew.filter((k, i, arr) => l.awards[k] && arr.indexOf(k) === i);
+  }
+  return l;
+}
+let L = loadLocal();
+function saveLocal() { lsSet(LS_KEY, JSON.stringify(L)); }
+if (!lsGet(LS_KEY)) saveLocal();
+
+/* ================= state ================= */
+const S = {
+  view: 'today', date: TODAY(), today: TODAY(), range: 7, allFoods: false, foodList: [],
+  mode: 'local', people: {}, others: {}, peek: {}, lastPull: 0, remoteHasMe: false, teamMsg: '', leaveArm: false,
+  lastAction: null, gNorm: 0, lastFocus: null,
+  foodsOpen: lsGet('zhrunometr:foods') !== '0', favEdit: false, dishIdx: -1, dishEmoji: '', dishList: [], awardT: 0, awardCheckT: 0
+};
+
+/* ================= sync: Firebase Realtime Database over REST =================
+   /g/<code>/p/<member>        profile {v, nick, norm, upd}
+   /g/<code>/d/<member>/<date> day {v, d, items, norm, upd}
+   The 12-character code is the key to the company. Each phone writes only its own branch. */
+const DB_RE = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.(firebaseio\.com|firebasedatabase\.app)$/i;
+const cleanBase = u => { u = String(u || '').trim().replace(/\/+$/, ''); return DB_RE.test(u) ? u : ''; };
+const dbBase = () => cleanBase(L.sync.url) || cleanBase(CFG.databaseURL);
+const syncOn = () => !!(dbBase() && L.sync.group);
+const gp = () => '/g/' + L.sync.group;
+async function api(path, opts, base) {
+  const b = base || dbBase();
+  if (!b) throw new Error('no database');
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), 15000) : 0;
+  try {
+    const res = await fetch(b + path, Object.assign({ cache: 'no-store', signal: ctl ? ctl.signal : undefined }, opts || {}));
+    if (!res.ok) { const err = new Error('HTTP ' + res.status); err.status = res.status; throw err; }
+    return await res.json();
+  } finally { if (timer) clearTimeout(timer); }
+}
+const put = (path, data) => api(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+
+let flushing = null, flushAgain = false;
+function flushPending() {
+  if (!syncOn()) return Promise.resolve();
+  if (flushing) { flushAgain = true; return flushing; }
+  flushing = (async () => {
+    do {
+      flushAgain = false;
+      if (L.profUnsynced || !S.remoteHasMe) {
+        await put(gp() + '/p/' + L.member + '.json', { v: 1, nick: L.profile.nick || '', norm: L.profile.norm, upd: Date.now() });
+        L.profUnsynced = false; S.remoteHasMe = true; saveLocal();
+      }
+      const oldest = addDays(TODAY(), -60);
+      for (const d of Object.keys(L.unsynced).sort()) {
+        const day = L.days[d];
+        if (!day || d < oldest) { delete L.unsynced[d]; continue; }
+        const stamp = day.upd;
+        await put(gp() + '/d/' + L.member + '/' + d + '.json', { v: 1, d, items: day.items, norm: day.norm, upd: day.upd });
+        if (L.days[d] && L.days[d].upd === stamp) delete L.unsynced[d];
+        saveLocal();
+      }
+    } while (flushAgain && syncOn());
+  })().finally(() => { flushing = null; });
+  return flushing;
+}
+async function pull() {
+  const since = addDays(TODAY(), -40);
+  const profiles = await api(gp() + '/p.json');
+  const people = {};
+  if (profiles && typeof profiles === 'object') {
+    for (const k of Object.keys(profiles)) { if (k === L.member || !isId(k)) continue; const p = cleanProfile(profiles[k]); if (p) people[k] = p; }
+  }
+  S.remoteHasMe = !!(profiles && typeof profiles === 'object' && profiles[L.member]);
+  const q = '?orderBy=' + encodeURIComponent('"$key"') + '&startAt=' + encodeURIComponent('"' + since + '"');
+  const others = {};
+  await Promise.all(Object.keys(people).map(async k => { others[k] = cleanDays(await api(gp() + '/d/' + k + '.json' + q)); }));
+  S.people = people; S.others = others; S.lastPull = Date.now();
+  L.cache = { people, others, at: S.lastPull };
+  saveLocal();
+}
+let tickT = 0, fails = 0, ticking = false;
+async function syncTick() {
+  clearTimeout(tickT);
+  if (!syncOn()) { setMode('local'); return; }
+  if (ticking) return;
+  ticking = true;
+  if (S.mode === 'local') setMode('connecting');
+  try {
+    await flushPending();
+    await pull();
+    fails = 0;
+    setMode('cloud');
+  } catch (e) {
+    fails++;
+    setMode('offline');
+  } finally {
+    ticking = false;
+    scheduleRender();
+    if (!document.hidden && syncOn()) tickT = setTimeout(syncTick, fails ? Math.min(45000 * Math.pow(2, fails - 1), 300000) : 45000);
+  }
+}
+let flushT = 0;
+function queueFlush() {
+  if (!syncOn()) return;
+  clearTimeout(flushT);
+  flushT = setTimeout(() => {
+    flushPending().then(() => { if (S.mode !== 'cloud') syncTick(); }, () => setMode('offline'));
+  }, 400);
+}
+
+/* company actions */
+function teamMsg(text) { S.teamMsg = text || ''; if (S.view === 'team') renderSync(); }
+function markHistory() {
+  const oldest = addDays(TODAY(), -40);
+  for (const d of Object.keys(L.days)) if (d >= oldest && L.days[d].items.length) L.unsynced[d] = 1;
+  L.profUnsynced = true;
+}
+async function connectDb(raw) {
+  const url = cleanBase(raw);
+  if (!url) { teamMsg('Это не похоже на адрес базы Firebase. Он выглядит так: https://имя-проекта-default-rtdb.europe-west1.firebasedatabase.app'); return; }
+  teamMsg('Проверяю базу…');
+  try { await api('/g/checkcheck22/p.json', null, url); }
+  catch (e) {
+    teamMsg(e && (e.status === 401 || e.status === 403)
+      ? 'База отвечает, но правила доступа не те. Вставь в Firebase правила из файла firebase/database.rules.json.'
+      : 'База не отвечает. Проверь адрес и интернет.');
+    return;
+  }
+  L.sync.url = url;
+  saveLocal();
+  S.teamMsg = '';
+  render();
+}
+async function createGroup() {
+  if (!dbBase() || L.sync.group) return;
+  L.sync.group = randomId(12);
+  markHistory();
+  S.remoteHasMe = false;
+  saveLocal();
+  teamMsg('Создаю компанию…');
+  setMode('connecting');
+  try {
+    await flushPending();
+    await pull();
+    S.teamMsg = '';
+    setMode('cloud');
+    render();
+    toast('Компания создана. Отправь код напарнику.', false);
+    syncTick();
+  } catch (e) {
+    L.sync.group = '';
+    saveLocal();
+    setMode('local');
+    teamMsg('Не получилось создать компанию: база не отвечает или правила доступа не те.');
+  }
+}
+async function joinGroup(raw) {
+  const code = String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!isId(code)) { teamMsg('В коде 12 букв и цифр. Проверь, что скопировал его целиком.'); return; }
+  teamMsg('Ищу компанию…');
+  let profiles = null;
+  try { profiles = await api('/g/' + code + '/p.json'); }
+  catch (e) { teamMsg('База не отвечает. Проверь интернет и попробуй ещё раз.'); return; }
+  if (!profiles || typeof profiles !== 'object' || !Object.keys(profiles).length) { teamMsg('Компании с таким кодом нет. Проверь код.'); return; }
+  L.sync.group = code;
+  markHistory();
+  S.remoteHasMe = false; S.people = {}; S.others = {};
+  saveLocal();
+  S.teamMsg = '';
+  toast('Ты в компании. Теперь вы видите друг друга.', false);
+  render();
+  syncTick();
+}
+let leaveT = 0;
+function leaveGroup() {
+  if (!S.leaveArm) {
+    S.leaveArm = true;
+    renderSync();
+    clearTimeout(leaveT);
+    leaveT = setTimeout(() => { S.leaveArm = false; if (S.view === 'team') renderSync(); }, 4000);
+    return;
+  }
+  clearTimeout(leaveT);
+  clearTimeout(tickT);
+  const code = L.sync.group;
+  S.leaveArm = false;
+  L.sync.group = ''; L.cache = null;
+  S.people = {}; S.others = {}; S.peek = {}; S.lastPull = 0;
+  saveLocal();
+  setMode('local');
+  render();
+  /* best effort: take my branch out of the company, so the partner stops seeing me */
+  const del = path => api('/g/' + code + path + '.json', { method: 'DELETE' });
+  Promise.all([del('/p/' + L.member), del('/d/' + L.member)])
+    .then(() => toast('Ты вышел из компании. Записи остались на телефоне, из компании они убраны.', false))
+    .catch(() => toast('Ты вышел из компании. Записи остались на телефоне.', false));
+}
+function shareCode() {
+  if (!L.sync.group) return;
+  const web = String(CFG.webURL || (!IN_APP && location.protocol === 'https:' ? location.origin + location.pathname : '')).trim();
+  const text = 'Вступай в мою компанию в Жрунометре. Код: ' + fmtCode(L.sync.group) + (web ? '\nПриложение: ' + web : '');
+  if (window.ZhrAndroid && typeof window.ZhrAndroid.share === 'function') { window.ZhrAndroid.share(text); return; }
+  if (navigator.share) { navigator.share({ text }).catch(() => {}); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => toast('Приглашение скопировано. Отправь его напарнику.', false), selectCode);
+  } else selectCode();
+}
+function selectCode() {
+  const el = $('#s-codeview');
+  if (!el) return;
+  const r = document.createRange();
+  r.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(r);
+  toast('Код выделен. Скопируй его и отправь напарнику.', false);
+}
+function ago(ts) {
+  if (!ts) return '';
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return 'только что';
+  if (s < 3600) return Math.floor(s / 60) + ' мин назад';
+  const d = new Date(ts), k = dkey(d);
+  return (k === TODAY() ? 'в ' : dateLong(k) + ' в ') + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+function statusLine() {
+  if (S.mode === 'cloud') return 'Синхронизировано ' + ago(S.lastPull) + '.';
+  if (S.mode === 'offline') return S.lastPull ? 'Нет связи. Показаны данные, полученные ' + ago(S.lastPull) + '.' : 'Нет связи с базой. Попробую ещё раз через минуту.';
+  return 'Подключаюсь…';
+}
+function syncPanel() {
+  const msg = S.teamMsg ? `<p class="msg" role="status">${esc(S.teamMsg)}</p>` : '';
+  if (!dbBase()) {
+    return '<div class="invite"><h3>Синхронизация не настроена</h3>'
+      + '<p>Чтобы видеть результаты друг друга, нужна бесплатная база Firebase. Как её завести, написано в README, раздел «Синхронизация». Готовый адрес базы вставь сюда:</p>'
+      + `<form class="sync-form" data-form="db" autocomplete="off" novalidate><input class="inp" id="s-url" inputmode="url" autocapitalize="none" spellcheck="false" placeholder="https://…firebasedatabase.app" aria-label="Адрес базы Firebase" value="${esc(L.sync.url)}"><button class="btn sm" type="submit">Подключить</button></form>`
+      + msg + '</div>';
+  }
+  if (!L.sync.group) {
+    return '<div class="invite"><h3>Компания</h3><p>Создай компанию и отправь код напарнику. Или вступи по его коду.</p>'
+      + '<button class="btn wide" type="button" data-act="create-group">Создать компанию</button>'
+      + '<form class="sync-form" data-form="join" autocomplete="off" novalidate><input class="inp" id="s-code" autocapitalize="none" spellcheck="false" placeholder="Код, например abcd-efgh-jkmn" aria-label="Код компании"><button class="btn sm" type="submit">Вступить</button></form>'
+      + msg + '</div>';
+  }
+  return '<div class="invite"><h3>Твоя компания</h3><p>Код для напарника:</p>'
+    + `<div class="code" id="s-codeview">${esc(fmtCode(L.sync.group))}</div>`
+    + `<p class="fine" id="s-status">${esc(statusLine())}</p>`
+    + '<div class="row"><button class="btn sm" type="button" data-act="share-code">Поделиться кодом</button>'
+    + `<button class="btn sm ghost" type="button" data-act="leave-group">${S.leaveArm ? 'Точно выйти?' : 'Выйти из компании'}</button></div>`
+    + msg + '</div>';
+}
+function renderSync() {
+  const host = $('#sync');
+  const key = [dbBase() ? 1 : 0, L.sync.group, S.leaveArm ? 1 : 0, S.teamMsg].join('|');
+  if (host.dataset.key === key && host.firstChild) {
+    const st = $('#s-status');
+    if (st) st.textContent = statusLine();
+    return;
+  }
+  const ae = document.activeElement;
+  const fid = ae && host.contains(ae) && ae.tagName === 'INPUT' ? ae.id : '';
+  const vals = {};
+  host.querySelectorAll('input').forEach(i => { vals[i.id] = i.value; });
+  host.dataset.key = key;
+  host.innerHTML = syncPanel();
+  host.querySelectorAll('input').forEach(i => { if (vals[i.id] != null) i.value = vals[i.id]; });
+  if (fid) { const el = document.getElementById(fid); if (el) el.focus(); }
+}
+
+/* ================= actions ================= */
+function myDay(date) { const d = L.days[date]; return { items: d ? d.items.slice() : [], norm: d && d.norm ? d.norm : null }; }
+function commitDay(date, items, normHint) {
+  const norm = date === TODAY() ? L.profile.norm : (normHint || L.profile.norm);
+  L.days[date] = { v: 1, d: date, items, total: sumItems(items), norm, upd: Date.now() };
+  L.unsynced[date] = 1;
+  saveLocal();
+  render();
+  queueFlush();
+  /* a past day changed: look for new awards only after the undo window, so a cancelled edit earns nothing */
+  if (date !== TODAY()) { clearTimeout(S.awardCheckT); S.awardCheckT = setTimeout(checkAwards, 5600); }
+}
+function addItem(food) {
+  if (!food) return;
+  const date = S.date, cur = myDay(date);
+  const item = { id: uid(), t: nowHM(), e: food.e || '', n: String(food.n).slice(0, 60), k: Math.round(food.k) };
+  cur.items.push(item);
+  commitDay(date, cur.items, cur.norm);
+  S.lastAction = { type: 'add', date, id: item.id };
+  toast(pick(ADD_TOAST.find(t => item.k < t[0])[1], item.id), true);
+}
+function delItem(id) {
+  const date = S.date, cur = myDay(date), idx = cur.items.findIndex(it => it.id === id);
+  if (idx < 0) return;
+  const it = cur.items.splice(idx, 1)[0];
+  commitDay(date, cur.items, cur.norm);
+  S.lastAction = { type: 'del', date, item: it, idx };
+  toast(pick(DEL_TOAST, it.id), true);
+}
+function undo() {
+  const a = S.lastAction;
+  if (!a) return;
+  if (a.type === 'fav-del') {
+    if (L.fav.length < FAV_MAX && !L.fav.some(f => favKey(f.n, f.k) === favKey(a.item.n, a.item.k))) L.fav.splice(Math.min(a.idx, L.fav.length), 0, a.item);
+    S.lastAction = null;
+    saveLocal();
+    render();
+    hideToast();
+    return;
+  }
+  const cur = myDay(a.date);
+  if (a.favId) L.fav = L.fav.filter(f => f.id !== a.favId);
+  if (a.type === 'add') cur.items = cur.items.filter(it => it.id !== a.id);
+  else cur.items.splice(Math.min(a.idx, cur.items.length), 0, a.item);
+  S.lastAction = null;
+  commitDay(a.date, cur.items, cur.norm);
+  hideToast();
+}
+
+/* "My dishes": tapped like the ready ones, kept on this phone */
+const isFav = (n, k) => L.fav.some(f => favKey(f.n, f.k) === favKey(n, k));
+function addFav(f) {
+  if (isFav(f.n, f.k)) return 'dup';
+  if (L.fav.length >= FAV_MAX) return 'full';
+  L.fav.push({ id: uid(), e: f.e || '', n: String(f.n).trim().slice(0, 60), k: Math.round(f.k) });
+  saveLocal();
+  return 'added';
+}
+const FAV_FULL = `В «Моих блюдах» уже ${FAV_MAX} блюда. Убери лишнее, чтобы добавить новое.`;
+function starItem(id) {
+  const day = L.days[S.date], it = day && day.items.find(x => x.id === id);
+  if (!it) return;
+  const r = addFav(it);
+  if (r === 'added') {
+    renderToday();
+    const btn = $$('#log [data-act="star"]').find(b => b.dataset.id === id);
+    if (btn) btn.focus();
+    toast('Добавлено в «Мои блюда». Теперь это одно касание.', false);
+  }
+  else toast(r === 'dup' ? 'Это блюдо уже в «Моих блюдах».' : FAV_FULL, false);
+}
+function openDish(i) {
+  const f = Number.isInteger(i) && L.fav[i] ? L.fav[i] : null;
+  S.dishIdx = f ? i : -1;
+  S.dishEmoji = f && f.e ? f.e : DISH_EMOJI[0];
+  /* a dish pinned from the log may carry its own emoji: it stays first in the picker while the sheet is open */
+  S.dishList = DISH_EMOJI.includes(S.dishEmoji) ? DISH_EMOJI : [S.dishEmoji].concat(DISH_EMOJI.slice(0, DISH_EMOJI.length - 1));
+  $('#dish-t').textContent = f ? 'Поправить блюдо' : 'Моё блюдо';
+  $('#d-name').value = f ? f.n : '';
+  $('#d-kcal').value = f ? String(f.k) : '';
+  $('#d-err').hidden = true;
+  $('#d-del').hidden = !f;
+  $('#d-em').innerHTML = S.dishList.map(e =>
+    `<button type="button" data-act="dish-em" data-e="${esc(e)}" aria-pressed="false" aria-label="Значок ${esc(e)}">${esc(e)}</button>`).join('');
+  markEmoji();
+  openModal('#dish', f ? '#dish-t' : '#d-name');
+}
+function markEmoji() { $$('#d-em button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.e === S.dishEmoji))); }
+/* after the tiles are redrawn, focus goes to the dish just saved, or to the "+" tile */
+function focusFav(i) {
+  const el = $(`#favs [data-act="fav"][data-i="${i}"]`) || $('#favs [data-act="fav-new"]') || $('#fav-sec h2');
+  if (el) { try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }
+}
+function dishErr(msg, field) { const el = $('#d-err'); el.textContent = msg; el.hidden = false; if (field) $(field).focus(); }
+function saveDish() {
+  const n = $('#d-name').value.trim().slice(0, 60);
+  const k = parseInt(String($('#d-kcal').value).replace(/\D/g, ''), 10);
+  if (!n) { dishErr('Как называется блюдо?', '#d-name'); return; }
+  if (!Number.isFinite(k) || k <= 0) { dishErr('Укажи калории числом. Хотя бы примерно.', '#d-kcal'); return; }
+  if (k > 5000) { dishErr('Больше 5 000 ккал в порции? Раздели на несколько блюд.', '#d-kcal'); return; }
+  const key = favKey(n, k), editing = S.dishIdx >= 0 && L.fav[S.dishIdx];
+  if (L.fav.some((f, j) => j !== S.dishIdx && favKey(f.n, f.k) === key)) { dishErr('Такое блюдо уже есть в «Моих блюдах».', '#d-name'); return; }
+  if (editing) L.fav[S.dishIdx] = Object.assign({}, L.fav[S.dishIdx], { e: S.dishEmoji, n, k });
+  else if (L.fav.length >= FAV_MAX) { dishErr(FAV_FULL); return; }
+  else L.fav.push({ id: uid(), e: S.dishEmoji, n, k });
+  saveLocal();
+  closeModal('#dish');
+  renderToday();
+  focusFav(editing ? S.dishIdx : L.fav.length - 1);
+  toast(editing ? 'Блюдо поправлено.' : 'Добавлено в «Мои блюда».', false);
+}
+function delDish() {
+  const i = S.dishIdx;
+  if (i < 0 || !L.fav[i]) return;
+  const item = L.fav.splice(i, 1)[0];
+  saveLocal();
+  closeModal('#dish');
+  renderToday();
+  focusFav(Math.min(i, L.fav.length - 1));
+  S.lastAction = { type: 'fav-del', item, idx: i };
+  toast('Убрано из «Моих блюд».', true);
+}
+
+/* awards: new ones are found after a day closes or a past day is edited */
+/* L.awardsNew keeps the popups not yet seen, so a reload (or Android recreating the screen) does not lose them */
+function checkAwards() {
+  clearTimeout(S.awardCheckT);
+  const st = awardStats(L.days, L.profile.norm);
+  let fresh = 0;
+  for (const a of AWARDS) if (!L.awards[a.id] && awardEarned(a, st)) { L.awards[a.id] = TODAY(); L.awardsNew.push(a.id); fresh++; }
+  if (fresh) { saveLocal(); render(); }
+  showNextAward();
+}
+const awardOkText = () => L.awardsNew.length > 1 ? `Дальше, там ещё ${L.awardsNew.length - 1}` : 'Принять с достоинством';
+function showNextAward() {
+  clearTimeout(S.awardT);
+  if (!$('#award').hidden) { $('#aw-ok').textContent = awardOkText(); return; }
+  const a = AWARDS.find(x => x.id === L.awardsNew[0]);
+  if (!a) { if (L.awardsNew.length) { L.awardsNew.shift(); saveLocal(); showNextAward(); } return; }
+  $('#aw-big').innerHTML = medal(a, true);
+  $('#aw-t').textContent = a.name;
+  $('#aw-cond').textContent = awardCond(a);
+  $('#aw-joke').textContent = a.joke;
+  $('#aw-ok').textContent = awardOkText();
+  openModal('#award', '#aw-ok');
+}
+function closeAward() {
+  closeModal('#award');
+  L.awardsNew.shift();
+  saveLocal();
+  if (L.awardsNew.length) S.awardT = setTimeout(showNextAward, 200);
+}
+
+/* ================= rendering ================= */
+let rq = 0;
+function scheduleRender() { if (rq) return; rq = requestAnimationFrame(() => { rq = 0; render(); }); }
+function render() {
+  renderTop();
+  if (S.view === 'today') renderToday();
+  else if (S.view === 'dyn') renderDyn();
+  else renderTeam();
+}
+const MODE_TXT = { connecting: 'Связь…', cloud: 'В сети', offline: 'Нет связи', local: 'Локально' };
+function setMode(m) {
+  if (S.mode !== m) { S.mode = m; renderTop(); }
+  if (S.view === 'team') renderSync();
+}
+function renderTop() {
+  const chip = $('#sync-chip');
+  chip.dataset.mode = S.mode;
+  $('#sync-txt').textContent = MODE_TXT[S.mode] || '';
+  chip.setAttribute('aria-label', 'Синхронизация: ' + (MODE_TXT[S.mode] || ''));
+  $('#hint').hidden = L.profile.set || S.view !== 'today';
+  $('#hint-norm').textContent = fmt(L.profile.norm);
+}
+function updateDial(total, norm) {
+  const host = $('#dial-host'), r = total / norm;
+  if (S.gNorm !== norm || !host.firstChild) {
+    host.innerHTML = buildDial(norm);
+    S.gNorm = norm;
+    const nd = $('#needle');
+    nd.getBoundingClientRect();
+    requestAnimationFrame(() => requestAnimationFrame(() => { nd.style.transform = `rotate(${f1(gAng(r))}deg)`; }));
+  } else {
+    $('#needle').style.transform = `rotate(${f1(gAng(r))}deg)`;
+  }
+  const rd = $('#g-read');
+  rd.textContent = fmt(total);
+  rd.classList.toggle('long', total >= 10000);
+  host.firstChild.classList.toggle('pegged', r > 1.6);
+}
+function setHeroSticker(st) {
+  const el = $('#hero-st');
+  if (el.dataset.st === st) return;
+  el.dataset.st = st;
+  el.innerHTML = kb(st);
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+}
+function factLine(total, norm, isToday, seed) {
+  const diff = norm - total;
+  if (!total) return isToday ? `Норма на сегодня <b>${fmt(norm)}</b> ккал` : `Норма в тот день была ${fmt(norm)} ккал`;
+  if (Math.abs(diff) <= SNIPER) return `<b>${fmt(total)}</b> ккал. Ровно в норму, снайпер.`;
+  if (diff > 0) return isToday ? `Осталось <b>${fmt(diff)}</b> ккал, это ≈ ${equiv(diff, seed + 'l')}` : `Итог <b>${fmt(total)}</b> ккал, недобор ${fmt(diff)}`;
+  return isToday ? `Перебор <b>+${fmt(-diff)}</b> ккал, это ≈ ${equiv(-diff, seed + 'o')}` : `Итог <b>${fmt(total)}</b> ккал, перебор ${fmt(-diff)}`;
+}
+function renderToday() {
+  const t = TODAY();
+  if (S.date > t) S.date = t;
+  const date = S.date, isToday = date === t, day = L.days[date];
+  const items = day ? day.items : [], total = sumItems(items);
+  const norm = isToday ? L.profile.norm : ((day && day.norm) || L.profile.norm);
+  const v = isToday ? liveVerdict(total, norm) : closedVerdict(total, norm);
+  $('#d1').textContent = dayTitle(date);
+  $('#d2').textContent = daySub(date);
+  $('#next').disabled = isToday;
+  $('#past').hidden = isToday;
+  updateDial(total, norm);
+  setHeroSticker(VMETA[v].st);
+  const pill = $('#pill');
+  pill.className = 'pill v-' + v;
+  pill.textContent = VMETA[v].label;
+  $('#note').textContent = pick(isToday ? LIVE[v] : PAST[v], date + v);
+  $('#fact').innerHTML = factLine(total, norm, isToday, date);
+  renderStreak(isToday);
+  renderFavs();
+  renderFoods();
+  renderLog(items, total);
+}
+const hasRealDays = () => Object.keys(L.days).some(d => L.days[d].items.length);
+/* the next streak medal still to win: earned ones are skipped even when the current streak is shorter */
+function nextStreakAward(cur) { return STREAK_AWARDS.find(a => a.streak > cur && !L.awards[a.id]) || null; }
+function renderStreak(isToday) {
+  const el = $('#streak');
+  if (!isToday || !hasRealDays()) { el.hidden = true; return; }
+  const cur = streak(L.days, L.profile.norm), next = nextStreakAward(cur);
+  const days = n => `${n} ${plural(n, ['день', 'дня', 'дней'])}`;
+  let text;
+  if (!next) text = `Серия: <b>${cur}</b> ${plural(cur, ['хороший день', 'хороших дня', 'хороших дней'])} подряд. Все медали за серии твои, легенда.`;
+  else if (cur > 0) text = `Серия: <b>${cur}</b> ${plural(cur, ['хороший день', 'хороших дня', 'хороших дней'])} подряд. До медали «${esc(next.name)}» ещё ${days(next.streak - cur)}.`;
+  else if (!L.awards.s3) text = 'Три хороших дня подряд, и первая медаль твоя. Сегодняшний засчитается завтра.';
+  else text = 'Серия прервалась. Ничего, новая начинается сегодня.';
+  el.innerHTML = medal(next || STREAK_AWARDS[STREAK_AWARDS.length - 1], !next) + `<span class="st-txt">${text}</span><span class="go" aria-hidden="true">›</span>`;
+  el.setAttribute('aria-label', $('.st-txt', el).textContent + ' Открыть награды.');
+  el.hidden = false;
+}
+function renderFavs() {
+  if (!L.fav.length) S.favEdit = false;
+  const ed = S.favEdit, host = $('#favs');
+  host.classList.toggle('editing', ed);
+  host.innerHTML = L.fav.map((f, i) =>
+    `<button class="food fav" type="button" data-act="fav" data-i="${i}" aria-label="${ed ? 'Изменить' : 'Добавить'}: ${esc(f.n)}, ${fmt(f.k)} ккал">`
+    + (ed ? `<span class="pen">${PEN_SVG}</span>` : '')
+    + `<span class="em" aria-hidden="true">${esc(f.e || '🍽️')}</span><span class="nm">${esc(f.n)}</span><span class="kc">${fmt(f.k)} ккал</span></button>`).join('')
+    + (L.fav.length < FAV_MAX ? `<button class="food add" type="button" data-act="fav-new"><span class="em" aria-hidden="true">+</span><span class="nm">${L.fav.length ? 'Ещё блюдо' : 'Добавить своё'}</span></button>` : '');
+  const btn = $('#fav-edit');
+  btn.hidden = !L.fav.length;
+  btn.textContent = ed ? 'Готово' : 'Изменить';
+  btn.setAttribute('aria-pressed', String(ed));
+  const hint = !L.fav.length ? 'Сюда кладут то, что едят часто. Нажми «Добавить своё» или звёздочку ☆ у записи в протоколе дня.'
+    : ed ? 'Нажми на блюдо, чтобы поправить его или убрать.' : '';
+  $('#fav-hint').textContent = hint;
+  $('#fav-hint').hidden = !hint;
+}
+function buildFoodList() {
+  const favNames = new Set(L.fav.map(f => f.n.trim().toLowerCase()));
+  const freq = new Map(), cutoff = addDays(TODAY(), -60);
+  for (const d of Object.keys(L.days)) {
+    if (d < cutoff) continue;
+    for (const it of L.days[d].items) {
+      const key = it.n.trim().toLowerCase() + '|' + it.k;
+      const f = freq.get(key) || { n: it.n, k: it.k, e: it.e, c: 0 };
+      f.c++;
+      freq.set(key, f);
+    }
+  }
+  const mine = Array.from(freq.values()).filter(f => f.c >= 2 && !favNames.has(f.n.trim().toLowerCase())).sort((a, b) => b.c - a.c).slice(0, 6).map(f => ({ n: f.n, k: f.k, e: f.e, mine: true }));
+  const seen = new Set(mine.map(f => f.n.trim().toLowerCase()).concat(Array.from(favNames)));
+  return mine.concat(FOODS.filter(f => !seen.has(f.n.toLowerCase())));
+}
+function renderFoods() {
+  const list = buildFoodList();
+  S.foodList = list;
+  $('#fold').setAttribute('aria-expanded', String(S.foodsOpen));
+  $('#foods-body').hidden = !S.foodsOpen;
+  $('#fold-aside').textContent = S.foodsOpen ? 'одно касание, одна порция' : `свёрнуто, ${list.length} ${plural(list.length, ['блюдо', 'блюда', 'блюд'])}`;
+  if (!S.foodsOpen) return;
+  const shown = S.allFoods ? list : list.slice(0, 9);
+  $('#foods').innerHTML = shown.map((f, i) =>
+    `<button class="food${f.mine ? ' mine' : ''}" type="button" data-act="food" data-i="${i}" aria-label="Добавить: ${esc(f.n)}, ${fmt(f.k)} ккал">`
+    + (f.mine ? '<span class="star">частое</span>' : '')
+    + `<span class="em" aria-hidden="true">${esc(f.e || '🍽️')}</span><span class="nm">${esc(f.n)}</span><span class="kc">${fmt(f.k)} ккал</span></button>`).join('');
+  const more = $('#more');
+  more.hidden = list.length <= 9;
+  more.textContent = S.allFoods ? 'Свернуть' : `Все блюда (${list.length})`;
+}
+function renderLog(items, total) {
+  const ul = $('#log');
+  $('#log-count').textContent = items.length ? `${items.length} ${plural(items.length, ['запись', 'записи', 'записей'])}` : '';
+  if (!items.length) { ul.innerHTML = '<li class="empty">Пока ни крошки. Подозрительно.</li>'; return; }
+  const sorted = items.slice().reverse().sort((a, b) => b.t.localeCompare(a.t));
+  ul.innerHTML = sorted.map(it => {
+    const on = isFav(it.n, it.k);
+    return `<li><span class="t">${esc(it.t)}</span><span class="n">${it.e ? `<span aria-hidden="true">${esc(it.e)}</span> ` : ''}${esc(it.n)}</span><span class="k">${fmt(it.k)}</span>`
+      + `<button class="fv" type="button" data-act="star" data-id="${esc(it.id)}" aria-pressed="${on}" aria-label="${on ? 'Уже в моих блюдах' : 'Запомнить в мои блюда'}: ${esc(it.n)}">${on ? '★' : '☆'}</button>`
+      + `<button class="x" type="button" data-act="del" data-id="${esc(it.id)}" aria-label="Удалить: ${esc(it.n)}">×</button></li>`;
+  }).join('')
+    + `<li class="sum"><span class="lbl">Итого, ккал</span><span class="k">${fmt(total)}</span><span></span><span></span></li>`;
+}
+
+function stat(k, v, u) { return `<div class="stat"><div class="s-k">${k}</div><div class="s-v">${v}</div><div class="s-u">${u}</div></div>`; }
+function summaryLine(good, logged, range, seed) {
+  const per = range === 7 ? 'Неделя' : 'Месяц';
+  if (!logged) return 'Данных пока нет. Прибор ждёт отчётов.';
+  const share = good / logged;
+  if (share >= 0.8) return pick([`${per} мечты. Диетологи плачут от счастья, холодильник от скуки.`, `${per} на пятёрку. Корону можно не снимать.`], seed);
+  if (share >= 0.5) return pick([`${per} на твёрдую четвёрку. Хомяк заглядывал, но ненадолго.`, 'Неплохо. Колобок одобряет, хоть и с оговорками.'], seed);
+  if (share >= 0.25) return pick([`${per} контрастов. Колобок в смятении.`, 'Хорошие дни были. Просто вкусных было больше.'], seed);
+  return pick(['Ну что ж. Зато было вкусно. Завтра новый шанс.', 'Прибор не осуждает. Прибор просто записывает.'], seed);
+}
+function renderDyn() {
+  const n = S.range, t = TODAY(), norm = L.profile.norm;
+  $$('#view-dyn .seg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.n === n)));
+  const real = Object.keys(L.days).some(d => L.days[d].items.length);
+  const days = real ? L.days : sampleDays(norm, 0);
+  const ser = series(days, norm, t, n);
+  $('#chart').innerHTML = (real ? '' : '<span class="stamp">Пример</span>') + barChart(ser, norm, n === 7)
+    + `<p class="chart-key">Пунктир — твоя норма, жёлтая полоса — золотая середина (90–105 %).${n === 7 ? ' Колобки — оценка дня.' : ''}</p>`;
+  $('#dyn-cta').hidden = real;
+  const closed = ser.filter(d => !d.isToday), logged = closed.filter(d => d.has);
+  const avg = logged.length ? logged.reduce((a, d) => a + d.total, 0) / logged.length : 0;
+  const good = logged.filter(d => GOOD(d.v)).length, st = streak(days, norm);
+  $('#stats').innerHTML = stat('В среднем', logged.length ? fmt(avg) : '—', 'ккал в день')
+    + stat('Хороших дней', `${good}<small> из ${logged.length}</small>`, 'корона или «молодец»')
+    + stat('Серия', String(st), plural(st, ['хороший день подряд', 'хороших дня подряд', 'хороших дней подряд']));
+  $('#summary').textContent = summaryLine(good, logged.length, n, t + n + (real ? '' : 's'));
+  const order = ['crown', 'good', 'meh', 'hamster', 'hole', 'leaf', 'skip'];
+  $('#legend').innerHTML = order.map(v => {
+    const c = closed.filter(d => d.v === v).length;
+    return `<div class="${c ? '' : 'zero'}">${kb(VMETA[v].st)}<span>${VMETA[v].label}</span><b>${c}</b></div>`;
+  }).join('');
+  renderAwards(real);
+  $('#hist-sec').hidden = !real;
+  if (real) {
+    $('#hist').innerHTML = ser.slice().reverse().map(d =>
+      `<li><button type="button" data-act="open-day" data-k="${d.k}">${kb(VMETA[d.v].st)}`
+      + `<span class="h-d"><b>${dayTitle(d.k)}</b><span>${dateLong(d.k)}</span></span>`
+      + `<span class="h-v">${d.has ? `<b>${fmt(d.total)}</b> ккал` : '—'}<span class="h-l">${VMETA[d.v].label}</span></span></button></li>`).join('');
+  }
+}
+
+function renderAwards(real) {
+  const st = awardStats(L.days, L.profile.norm), got = AWARDS.filter(a => L.awards[a.id]).length;
+  const next = nextStreakAward(st.cur), days = n => `${n} ${plural(n, ['день', 'дня', 'дней'])}`;
+  $('#aw-count').textContent = `${got} из ${AWARDS.length}`;
+  let line;
+  if (!real) line = 'Записывай еду. Три хороших дня подряд, и первая медаль твоя.';
+  else if (!next) line = 'Все медали за серии собраны. Дальше только легенды.';
+  else line = `До медали «<b>${esc(next.name)}</b>» ещё ${days(next.streak - st.cur)}.`;
+  const pct = next ? Math.min(st.cur / next.streak, 1) * 100 : 100;
+  $('#aw-card').innerHTML = `<div class="aw-row"><span class="s-v">${st.cur}</span><p>${plural(st.cur, ['хороший день', 'хороших дня', 'хороших дней'])} подряд. ${line}</p></div>`
+    + `<div class="track" aria-hidden="true">${pct ? `<i class="fill" style="width:${f1(pct)}%;background:var(--v-good)"></i>` : ''}</div>`
+    + `<p class="aw-best">Лучшая серия: ${days(st.best)}. Хороший день — от 70 до 105 % нормы, засчитывается, когда день закончился.</p>`;
+  $('#medals').innerHTML = AWARDS.map(a => {
+    const on = !!L.awards[a.id];
+    return `<div class="medal${on ? '' : ' off'}" role="img" aria-label="${esc(a.name)}: ${esc(awardCond(a))}. ${on ? 'Получена ' + dateLong(L.awards[a.id]) : 'Ещё не получена'}">`
+      + medal(a, on) + `<span class="m-n">${esc(a.name)}</span><span class="m-d">${on ? 'получена ' + dateLong(L.awards[a.id]) : esc(awardCond(a))}</span></div>`;
+  }).join('');
+}
+
+function participants() {
+  const list = [{ key: L.member, me: true, nick: L.profile.nick, norm: L.profile.norm, days: L.days }];
+  for (const k of Object.keys(S.people)) list.push({ key: k, me: false, nick: S.people[k].nick, norm: S.people[k].norm, days: S.others[k] || {} });
+  return list;
+}
+function personName(p) { return p.me ? (p.nick || 'Ты') : (p.nick || 'Напарник'); }
+function lastSeen(days) {
+  let best = 0;
+  for (const d of Object.keys(days)) { const u = Number(days[d].upd) || 0; if (u > best) best = u; }
+  if (!best) return '';
+  const dt = new Date(best), k = dkey(dt);
+  if (k === TODAY()) return 'запись в ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  if (k === addDays(TODAY(), -1)) return 'запись вчера';
+  return 'запись ' + dateLong(k);
+}
+function peekList(items) {
+  return '<ul class="peek">' + items.slice().sort((a, b) => a.t.localeCompare(b.t)).map(it =>
+    `<li><span class="t">${esc(it.t)}</span><span class="n">${it.e ? esc(it.e) + ' ' : ''}${esc(it.n)}</span><span class="k">${fmt(it.k)}</span></li>`).join('') + '</ul>';
+}
+function personCard(p, ghost) {
+  const t = TODAY(), day = p.days[t], items = day ? day.items : [], total = sumItems(items);
+  const v = liveVerdict(total, p.norm), r = total / p.norm;
+  const ser = series(p.days, p.norm, t, 7), st = streak(p.days, p.norm);
+  const open = !!S.peek[p.key], last = ghost ? 'запись в 16:05' : lastSeen(p.days);
+  const fill = total ? `<i class="fill" style="width:${f1(Math.min(r, 1.5) / 1.5 * 100)}%;background:var(--v-${v === 'run' ? 'good' : v})"></i>` : '';
+  return `<article class="person${ghost ? ' ghost' : ''}">`
+    + (ghost ? '<span class="stamp">Пример</span>' : '')
+    + `<div class="p-st">${kb(VMETA[v].st)}</div>`
+    + `<div class="p-main"><div class="who"><span class="nm">${esc(ghost ? 'Напарник' : personName(p))}</span>${p.me ? '<span class="me-tag">это ты</span>' : ''}</div>`
+    + `<span class="pill sm v-${v}">${VMETA[v].label}</span>`
+    + `<div class="p-num"><b>${fmt(total)}</b> из ${fmt(p.norm)} ккал</div>`
+    + `<div class="track" aria-hidden="true">${fill}<i class="tick"></i></div></div>`
+    + `<div class="p-foot"><div class="p-mini">${miniChart(ser, p.norm)}<span class="mini-cap">7 дней${last ? ' · ' + last : ''}</span></div>`
+    + `<div class="p-streak"><b>${st}</b>${plural(st, ['хороший день', 'хороших дня', 'хороших дней'])} подряд</div></div>`
+    + (!p.me && items.length ? `<button class="peek-btn" type="button" data-act="peek" data-key="${esc(p.key)}" aria-expanded="${open}">${open ? 'Спрятать тарелку' : 'Подглядеть в тарелку'}</button>` : '')
+    + (!p.me && open && items.length ? peekList(items) : '')
+    + '</article>';
+}
+function leadBanner(list) {
+  const ws = list.map(p => {
+    const ser = series(p.days, p.norm, addDays(TODAY(), -1), 7);
+    return { p, good: ser.filter(d => GOOD(d.v)).length, bad: ser.filter(d => BAD(d.v)).length };
+  });
+  const maxG = Math.max(...ws.map(w => w.good)), maxB = Math.max(...ws.map(w => w.bad));
+  const names = arr => esc(joinNames(arr.map(w => personName(w.p))));
+  const crownL = maxG > 0 ? `${names(ws.filter(w => w.good === maxG))} · ${maxG} ${plural(maxG, ['хороший день', 'хороших дня', 'хороших дней'])} из 7` : 'Пока никому. Корона пылится на полке.';
+  const hamL = maxB > 0 ? `${names(ws.filter(w => w.bad === maxB))} · ${maxB} ${plural(maxB, ['перебор', 'перебора', 'переборов'])} за неделю` : 'Не замечен. Подозрительно мирная неделя.';
+  return `<div class="lead"><div class="lead-row">${kb('crown')}<p><b>Корона недели</b>${crownL}</p></div>`
+    + `<div class="lead-row">${kb('hamster')}<p><b>Хомяк недели</b>${hamL}</p></div></div>`;
+}
+function renderTeam() {
+  const list = participants(), others = list.filter(p => !p.me);
+  $('#lead').innerHTML = others.length ? leadBanner(list) : '';
+  let html = list.map(p => personCard(p, false)).join('');
+  if (!others.length) html += personCard({ key: 'demo', me: false, nick: '', norm: 1900, days: sampleDays(1900, 7) }, true);
+  $('#people').innerHTML = html;
+  renderSync();
+}
+
+function setView(v) {
+  if (!['today', 'dyn', 'team'].includes(v)) v = 'today';
+  S.view = v;
+  if (v !== 'today') S.favEdit = false;
+  lsSet('zhrunometr:view', v);
+  for (const id of ['today', 'dyn', 'team']) $('#view-' + id).hidden = id !== v;
+  $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === v)));
+  window.scrollTo(0, 0);
+  render();
+}
+
+/* ================= toast ================= */
+let toastT = 0;
+function toast(msg, withUndo) {
+  const el = $('#toast');
+  $('#toast-msg').textContent = msg;
+  $('#toast-undo').hidden = !withUndo;
+  el.hidden = false;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(hideToast, withUndo ? 5000 : 3200);
+}
+function hideToast() { clearTimeout(toastT); $('#toast').hidden = true; S.lastAction = null; }
+
+/* ================= theme: light, dark or as the phone says ================= */
+const THEME_KEY = 'zhrunometr:theme';
+const THEME_BG = { light: '#E1EEDA', dark: '#0F1612' };
+const darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+let themeMode = ['light', 'dark'].includes(lsGet(THEME_KEY)) ? lsGet(THEME_KEY) : 'auto';
+function applyTheme() {
+  const root = document.documentElement;
+  if (themeMode === 'auto') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', themeMode);
+  const dark = themeMode === 'dark' || (themeMode === 'auto' && !!(darkMQ && darkMQ.matches));
+  $$('meta[name="theme-color"]').forEach(m => {
+    if (!m.dataset.orig) m.dataset.orig = m.content;
+    m.content = themeMode === 'auto' ? m.dataset.orig : THEME_BG[dark ? 'dark' : 'light'];
+  });
+  $$('#theme-seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === themeMode)));
+  /* the Android shell repaints its own background and the status and navigation bars */
+  if (window.ZhrAndroid && typeof window.ZhrAndroid.setTheme === 'function') {
+    try { window.ZhrAndroid.setTheme(themeMode, dark); } catch (e) { /* an older shell without this method */ }
+  }
+}
+function setTheme(mode) {
+  themeMode = ['light', 'dark'].includes(mode) ? mode : 'auto';
+  lsSet(THEME_KEY, themeMode);
+  applyTheme();
+}
+if (darkMQ) {
+  const onScheme = () => { if (themeMode === 'auto') applyTheme(); };
+  if (darkMQ.addEventListener) darkMQ.addEventListener('change', onScheme);
+  else if (darkMQ.addListener) darkMQ.addListener(onScheme);
+}
+
+/* ================= settings sheet ================= */
+function syncNote() {
+  if (S.mode === 'cloud') return 'Записи синхронизируются с компанией. Позывной и норму увидит напарник.';
+  if (S.mode === 'offline') return 'Нет связи с базой. Записи сохраняются на телефоне и уйдут, когда появится интернет.';
+  if (S.mode === 'connecting') return 'Подключаюсь к базе…';
+  if (dbBase()) return 'База подключена. Создай компанию или вступи по коду во вкладке «Компания».';
+  return 'Записи хранятся только на этом телефоне. Синхронизация настраивается во вкладке «Компания».';
+}
+/* bottom sheets: settings, "my dish" and the award; the award may open on top of another one */
+const MODALS = ['#award', '#dish', '#sheet'];
+const topModal = () => MODALS.find(m => !$(m).hidden) || null;
+function openModal(sel, focusSel) {
+  if (!topModal()) S.lastFocus = document.activeElement;
+  $(sel).hidden = false;
+  if (focusSel) setTimeout(() => { const el = $(focusSel); if (!el) return; try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }, 30);
+}
+function closeModal(sel) {
+  $(sel).hidden = true;
+  if (!topModal() && S.lastFocus && S.lastFocus.focus) { try { S.lastFocus.focus({ preventScroll: true }); } catch (e) { /* element is gone */ } }
+}
+function closeTop() {
+  const m = topModal();
+  if (m === '#award') closeAward();
+  else if (m) closeModal(m);
+  return !!m;
+}
+function markPreset() { const v = String($('#f-norm').value).replace(/\D/g, ''); $$('#presets button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); }
+function openSheet() {
+  $('#f-nick').value = L.profile.nick;
+  $('#f-nick').placeholder = 'Например, Пончик';
+  $('#f-norm').value = String(L.profile.norm);
+  $('#f-err').hidden = true;
+  markPreset();
+  $('#sync-note').textContent = syncNote();
+  applyTheme();
+  openModal('#sheet', '#f-nick');
+}
+function closeSheet() { closeModal('#sheet'); }
+function saveSettings() {
+  const nick = $('#f-nick').value.trim().slice(0, 24);
+  const raw = parseInt(String($('#f-norm').value).replace(/\D/g, ''), 10);
+  if (!Number.isFinite(raw) || raw < NORM_MIN || raw > NORM_MAX) { $('#f-err').hidden = false; $('#f-norm').focus(); return; }
+  const normChanged = raw !== L.profile.norm, t = TODAY();
+  L.profile = { nick, norm: raw, set: true };
+  L.profUnsynced = true;
+  if (normChanged && L.days[t]) { L.days[t] = Object.assign({}, L.days[t], { norm: raw, upd: Date.now() }); L.unsynced[t] = 1; }
+  saveLocal();
+  closeSheet();
+  render();
+  queueFlush();
+  toast('Прибор перенастроен.', false);
+}
+function calc() {
+  const age = Number($('#c-age').value), h = Number($('#c-h').value), w = parseFloat(String($('#c-w').value).replace(',', '.'));
+  const male = !$('#sx-f').checked, act = Number($('#c-act').value), goal = Number($('#c-goal').value);
+  const use = $('#calc-use');
+  if (!(age >= 18 && age <= 100 && h >= 120 && h <= 230 && w >= 35 && w <= 300)) { $('#calc-res').textContent = '—'; use.disabled = true; return; }
+  const bmr = 10 * w + 6.25 * h - 5 * age + (male ? 5 : -161);
+  const n = Math.min(NORM_MAX, Math.max(NORM_MIN, Math.round(bmr * act * goal / 50) * 50));
+  $('#calc-res').textContent = fmt(n);
+  use.disabled = false;
+  use.dataset.v = String(n);
+}
+
+/* ================= events ================= */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const a = el.dataset.act;
+  if (a === 'food') addItem(S.foodList[Number(el.dataset.i)]);
+  else if (a === 'del') delItem(el.dataset.id);
+  else if (a === 'undo') undo();
+  else if (a === 'prev') { S.date = addDays(S.date, -1); renderToday(); }
+  else if (a === 'next') { if (S.date < TODAY()) { S.date = addDays(S.date, 1); renderToday(); } }
+  else if (a === 'go-today') { S.date = TODAY(); renderToday(); }
+  else if (a === 'more') { S.allFoods = !S.allFoods; renderFoods(); }
+  else if (a === 'tab') setView(el.dataset.view);
+  else if (a === 'range') { S.range = Number(el.dataset.n) === 30 ? 30 : 7; lsSet('zhrunometr:range', String(S.range)); renderDyn(); }
+  else if (a === 'open-day') { if (isDateKey(el.dataset.k)) S.date = el.dataset.k; setView('today'); }
+  else if (a === 'go-add') { S.date = TODAY(); setView('today'); }
+  else if (a === 'peek') { const k = el.dataset.key; S.peek[k] = !S.peek[k]; renderTeam(); }
+  else if (a === 'open-sheet') openSheet();
+  else if (a === 'close-sheet') closeSheet();
+  else if (a === 'preset') { $('#f-norm').value = el.dataset.v; $('#f-err').hidden = true; markPreset(); }
+  else if (a === 'use-calc') { if (el.dataset.v) { $('#f-norm').value = el.dataset.v; $('#f-err').hidden = true; markPreset(); } }
+  else if (a === 'save-settings') saveSettings();
+  else if (a === 'theme') setTheme(el.dataset.v);
+  else if (a === 'fav') { const f = L.fav[Number(el.dataset.i)]; if (!f) return; if (S.favEdit) openDish(Number(el.dataset.i)); else addItem(f); }
+  else if (a === 'fav-new') { if (L.fav.length >= FAV_MAX) toast(FAV_FULL, false); else openDish(null); }
+  else if (a === 'fav-edit') { S.favEdit = !S.favEdit; renderFavs(); }
+  else if (a === 'star') starItem(el.dataset.id);
+  else if (a === 'fold-foods') { S.foodsOpen = !S.foodsOpen; if (!S.foodsOpen) S.allFoods = false; lsSet('zhrunometr:foods', S.foodsOpen ? '1' : '0'); renderFoods(); }
+  else if (a === 'dish-em') { S.dishEmoji = el.dataset.e || DISH_EMOJI[0]; markEmoji(); }
+  else if (a === 'dish-save') saveDish();
+  else if (a === 'dish-del') delDish();
+  else if (a === 'close-dish') closeModal('#dish');
+  else if (a === 'close-award') closeAward();
+  else if (a === 'go-awards') { setView('dyn'); const sec = $('#aw-sec'); if (sec) sec.scrollIntoView({ block: 'start' }); }
+  else if (a === 'create-group') createGroup();
+  else if (a === 'share-code') shareCode();
+  else if (a === 'leave-group') leaveGroup();
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('form[data-form]');
+  if (!f) return;
+  e.preventDefault();
+  if (f.dataset.form === 'db') connectDb($('#s-url').value);
+  else if (f.dataset.form === 'join') joinGroup($('#s-code').value);
+});
+MODALS.forEach(m => $(m).addEventListener('click', e => { if (e.target === e.currentTarget) { if (m === '#award') closeAward(); else closeModal(m); } }));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeTop();
+  else if (e.key === 'Enter' && topModal() === '#dish' && e.target.tagName === 'INPUT') { e.preventDefault(); saveDish(); }
+});
+$('#f-norm').addEventListener('input', () => { $('#f-err').hidden = true; markPreset(); });
+['c-age', 'c-h', 'c-w', 'c-act', 'c-goal', 'sx-m', 'sx-f'].forEach(id => { $('#' + id).addEventListener('input', calc); $('#' + id).addEventListener('change', calc); });
+function setCHint(msg, err) { const h = $('#c-hint'); h.textContent = msg; h.classList.toggle('err', !!err); }
+$('#custom').addEventListener('submit', e => {
+  e.preventDefault();
+  const n = $('#c-name').value.trim().slice(0, 60) || 'Что-то вкусное';
+  const k = parseInt(String($('#c-kcal').value).replace(/\D/g, ''), 10);
+  if (!Number.isFinite(k) || k <= 0) { setCHint('Укажи калории числом. Хотя бы примерно.', true); $('#c-kcal').focus(); return; }
+  if (k > 5000) { setCHint('Больше 5 000 ккал за раз? Раздели на несколько записей, прибору так спокойнее.', true); $('#c-kcal').focus(); return; }
+  addItem({ n, k, e: '' });
+  if ($('#c-keep').checked) {
+    const r = addFav({ n, k, e: '' });
+    renderToday();
+    /* "Отменить" then takes back both the entry and the remembered dish */
+    if (r === 'added' && S.lastAction && S.lastAction.type === 'add') S.lastAction.favId = L.fav[L.fav.length - 1].id;
+    if (r === 'added') toast('Записал и запомнил в «Мои блюда».', true);
+    else if (r === 'full') toast('Записал. А «Мои блюда» уже полные, убери лишнее.', true);
+  }
+  $('#c-name').value = '';
+  $('#c-kcal').value = '';
+  $('#c-keep').checked = false;
+  setCHint(C_HINT, false);
+});
+function checkDay() {
+  const t = TODAY();
+  if (t === S.today) return;
+  if (S.date === S.today) S.date = t;
+  S.today = t;
+  render();
+  checkAwards();
+}
+setInterval(checkDay, 60000);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { clearTimeout(tickT); return; }
+  checkDay();
+  syncTick();
+});
+window.addEventListener('online', () => syncTick());
+/* Android back button: close the sheet, then go back to "Today", then leave the app. */
+window.zhrBack = () => {
+  if (closeTop()) return true;
+  if (S.favEdit && S.view === 'today') { S.favEdit = false; renderFavs(); return true; }
+  if (S.view !== 'today') { setView('today'); return true; }
+  if (S.date !== TODAY()) { S.date = TODAY(); renderToday(); return true; }
+  return false;
+};
+
+/* ================= start ================= */
+applyTheme();
+if (Number(lsGet('zhrunometr:range')) === 30) S.range = 30;
+if (L.cache && syncOn()) { S.people = L.cache.people; S.others = L.cache.others; S.lastPull = L.cache.at; }
+S.mode = syncOn() ? 'connecting' : 'local';
+setView(lsGet('zhrunometr:view') || 'today');
+checkAwards();
+syncTick();
+if (!IN_APP && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
